@@ -162,7 +162,7 @@ function Alternativas({ a, campo, onCambiar }) {
   )
 }
 
-/* LA ABIERTA COMO TABLERO (tablero.js): lo que se hacía en Padlet. Todo
+/* LA ABIERTA COMO TABLERO (tablero.js): un muro de publicaciones. Todo
    apagado, es la abierta de siempre. Las columnas se escriben una por línea,
    como las consignas, y se limpian al guardar; con una sola no hay columnas. */
 function OpcionesTablero({ a, campo, onCambiar }) {

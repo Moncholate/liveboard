@@ -846,7 +846,7 @@ function AvisoClase({ store, id }) {
 
 /* ── La abierta como tablero (tablero.js) ────────────────────────────────── */
 
-/* Como en Padlet: cada uno publica una tarjeta —texto, foto o los dos, en la
+/* Cada uno publica una tarjeta —texto, foto o los dos, en la
    columna que elija— y, si la actividad lo deja, ve las de los demás y las
    comenta. Lo suyo lo edita o lo borra mientras las respuestas estén abiertas.
    Con moderación, lo que el docente ya puso en pantalla no se edita: se

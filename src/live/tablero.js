@@ -1,7 +1,7 @@
 /* ============================================================================
    LA PREGUNTA ABIERTA COMO TABLERO (14-oct-2026)
    ----------------------------------------------------------------------------
-   Lo que el docente hacía en Padlet, dentro de la pregunta abierta: cada uno
+   Un muro de publicaciones dentro de la pregunta abierta: cada uno
    publica una tarjeta (texto, foto o los dos), los demás comentan debajo, y el
    proyector las ordena de cuatro maneras que se cambian en vivo. Todo con
    opciones que el docente prende al armar la actividad; con todas apagadas, la
@@ -10,7 +10,7 @@
      foto         se puede subir una foto (la cámara o la galería)
      comentarios  los compañeros comentan las publicaciones
      nombres      cada tarjeta y cada comentario llevan el nombre de quien lo
-                  escribió (como en Padlet; sin esto, la abierta es anónima)
+                  escribió (sin esto, la abierta es anónima)
      reacciones   👍 Bien dicho, 💡 Buena idea, 🤔 No entendí, 🔍 Revisa algo:
                   feedback a los compañeros, anónimo (se ve cuántas, no quién)
      sinModerar   se publica al instante; el docente edita o quita después.
@@ -74,7 +74,7 @@ export const opcionesLimpias = (a) => {
 export const esTablero = (a) => a?.tipo === 'abierta' && (OPCIONES.some(k => a[k] === true) || columnasDe(a).length > 0)
 
 /** ¿Los celulares ven lo que publican los demás? Si se puede comentar, hay
-    que verlo; si se publica al instante, también, como en Padlet. */
+    que verlo; si se publica al instante, también. */
 export const celularVeElMuro = (a) => a?.comentarios === true || a?.reacciones === true || a?.sinModerar === true
 
 /* ── Cómo se ordena en el proyector ──────────────────────────────────────── */

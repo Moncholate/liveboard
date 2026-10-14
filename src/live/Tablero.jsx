@@ -1,7 +1,7 @@
 /* ============================================================================
    EL TABLERO EN EL PROYECTOR
    ----------------------------------------------------------------------------
-   La pregunta abierta como en Padlet (tablero.js): las publicaciones con su
+   La pregunta abierta como tablero (tablero.js): las publicaciones con su
    foto, su texto y sus comentarios, ordenadas de cuatro maneras que el docente
    cambia en vivo sin perder nada:
 
