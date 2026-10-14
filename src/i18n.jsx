@@ -405,7 +405,7 @@ export const TEXTOS = {
   fondoProyector: { es: 'Fondo del proyector', en: 'Projector background' },
   fondoAyuda: { es: 'Se ve detrás de las actividades. Los celulares no cambian.', en: 'Shown behind the activities. Phones don’t change.' },
   // La abierta como tablero (tablero.js)
-  comoTablero: { es: 'Como tablero (al estilo Padlet)', en: 'As a board (Padlet style)' },
+  comoTablero: { es: 'Como tablero', en: 'As a board' },
   comoTableroAyuda: { es: 'Fotos, comentarios entre ellos, nombres y columnas. Todo apagado, es la respuesta abierta de siempre.', en: 'Photos, comments between students, names and columns. With everything off, it is the usual open answer.' },
   opcion_foto: { es: 'Pueden subir una foto', en: 'They can upload a photo' },
   opcionAyuda_foto: { es: 'De la cámara o la galería. Se achica en el celular antes de subirla.', en: 'From the camera or the gallery. It is shrunk on the phone before uploading.' },
