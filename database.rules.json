@@ -67,6 +67,18 @@
             }
           }
         },
+        "reacciones": {
+          "$aid": {
+            "$publicacion": {
+              "$quien": {
+                "$tipo": {
+                  ".write": true,
+                  ".validate": "newData.isBoolean() && newData.val() === true && ($tipo === 'bien' || $tipo === 'idea' || $tipo === 'duda' || $tipo === 'revisa')"
+                }
+              }
+            }
+          }
+        },
         "moderacion": {
           ".write": true
         },

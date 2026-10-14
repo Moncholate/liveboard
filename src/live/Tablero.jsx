@@ -19,7 +19,7 @@
    ========================================================================== */
 import { useEffect, useState } from 'react'
 import { borradorVigente } from './logic.js'
-import { columnaDe, columnasDe, porColumna, vistasDe } from './tablero.js'
+import { REACCIONES, columnaDe, columnasDe, porColumna, reaccionesDe, vistasDe } from './tablero.js'
 import { Cambios } from './Cambios.jsx'
 import { useT } from '../i18n.jsx'
 
@@ -29,7 +29,7 @@ import { useT } from '../i18n.jsx'
 const COLOR_COLUMNA = ['#7c3aed', '#0d9488', '#ea580c', '#db2777']
 export const colorColumna = (i) => COLOR_COLUMNA[i % COLOR_COLUMNA.length]
 
-export function Tablero({ actividad, publicaciones, fotos, comentarios, vista, verCambios = true, borrador = null, sobreFondo = false }) {
+export function Tablero({ actividad, publicaciones, fotos, comentarios, reacciones, vista, verCambios = true, borrador = null, sobreFondo = false }) {
   const t = useT()
   const [abierta, setAbierta] = useState(null)
   const columnas = columnasDe(actividad)
@@ -45,6 +45,7 @@ export function Tablero({ actividad, publicaciones, fotos, comentarios, vista, v
     <TarjetaPublicacion key={r.pid} r={r} foto={fotos?.[r.pid]} nombres={actividad.nombres === true}
       columna={columnas.length && vista !== 'columnas' ? suColumna(r) : null}
       comentarios={comentarios?.[r.pid] || []} verComentarios={recortada ? 'cuenta' : 'todos'}
+      reacciones={actividad.reacciones ? reaccionesDe(reacciones?.[r.pid], r.pid) : null}
       recortada={recortada} grande={grande} verCambios={verCambios} vivo={vivo(r)} sobreFondo={sobreFondo}
       onAbrir={() => setAbierta(r.pid)} />
   )
@@ -86,6 +87,7 @@ export function Tablero({ actividad, publicaciones, fotos, comentarios, vista, v
       <div className="w-full self-start">{cuerpo}</div>
       {actual && (
         <Ampliada r={actual} foto={fotos?.[actual.pid]} nombres={actividad.nombres === true} comentarios={comentarios?.[actual.pid] || []}
+          reacciones={actividad.reacciones ? reaccionesDe(reacciones?.[actual.pid], actual.pid) : null}
           verCambios={verCambios} vivo={vivo(actual)} columna={columnas.length ? suColumna(actual) : null}
           onCerrar={() => setAbierta(null)} />
       )}
@@ -109,6 +111,7 @@ function TextoPublicado({ r, verCambios, vivo }) {
 export function TarjetaPublicacion({
   r, foto, nombres, columna = null, comentarios = [], verComentarios = 'todos', recortada = false, grande = false,
   verCambios = true, vivo = null, sobreFondo = false, chico = false, onAbrir = null, pieComentario = null, children = null,
+  reacciones = null, onReaccionar = null, encabezado = null,
 }) {
   const t = useT()
   const texto = r.texto || vivo !== null
@@ -120,6 +123,7 @@ export function TarjetaPublicacion({
   return (
     <article className={`relative w-full rounded-2xl bg-white border overflow-hidden text-left animate-pop ${vivo !== null ? 'border-teal-600 ring-4 ring-teal-600/30' : 'border-slate-200'} ${sobreFondo ? 'shadow-lg' : chico ? '' : 'shadow-sm'}`}>
       {columna && <div aria-hidden="true" className="h-1.5" style={{ background: colorColumna(columna.i) }} />}
+      {encabezado}
       <div {...tocable} className={`block w-full text-left ${onAbrir ? 'cursor-pointer' : ''}`}>
         {r.foto && (foto
           ? <img src={foto} alt="" className={`block w-full bg-slate-100 ${recortada ? 'aspect-[4/3] object-cover' : grande ? 'max-h-[60vh] object-contain' : 'h-auto'}`} />
@@ -139,6 +143,9 @@ export function TarjetaPublicacion({
       </div>
       {r.corregida && !verCambios && vivo === null && (
         <span title={t('corregida')} aria-label={t('corregida')} className="absolute top-2 right-3 text-base text-slate-400">✎</span>
+      )}
+      {reacciones && (onReaccionar || reacciones.total > 0) && (
+        <Reacciones reacciones={reacciones} onReaccionar={onReaccionar} chico={chico} grande={grande} />
       )}
       {verComentarios === 'cuenta' && comentarios.length > 0 && (
         <p className={`px-4 pb-3 font-bold text-slate-500 tabular-nums ${chico ? 'text-xs' : 'text-base'}`}>💬 {t('comentariosN', comentarios.length)}</p>
@@ -161,7 +168,7 @@ export function TarjetaPublicacion({
 
 /* La publicación en grande: la foto a la izquierda y lo que se dijo de ella a
    la derecha, para comentarla entre todos. Esc o un toque afuera la cierra. */
-function Ampliada({ r, foto, nombres, comentarios, verCambios, vivo, columna, onCerrar }) {
+function Ampliada({ r, foto, nombres, comentarios, reacciones, verCambios, vivo, columna, onCerrar }) {
   const t = useT()
   useEffect(() => {
     const tecla = (e) => { if (e.key === 'Escape') onCerrar() }
@@ -185,6 +192,7 @@ function Ampliada({ r, foto, nombres, comentarios, verCambios, vivo, columna, on
             </div>
             <button onClick={onCerrar} className="shrink-0 rounded-xl border border-slate-300 px-4 py-2 text-lg font-bold text-slate-700">{t('cerrar')}</button>
           </div>
+          {reacciones?.total > 0 && <div className="-mx-6"><Reacciones reacciones={reacciones} grande /></div>}
           {comentarios.length > 0 ? (
             <ul className="flex flex-col gap-3 border-t border-slate-200 pt-4">
               {comentarios.map(c => (
@@ -196,6 +204,33 @@ function Ampliada({ r, foto, nombres, comentarios, verCambios, vivo, columna, on
           ) : <p className="text-xl text-slate-500 border-t border-slate-200 pt-4">{t('sinComentarios')}</p>}
         </div>
       </div>
+    </div>
+  )
+}
+
+/* LAS REACCIONES de una tarjeta (tablero.js). En el proyector, solo las que
+   tienen alguna, con su nombre escrito: un emoji solo se lee distinto según
+   quién lo mire. En el celular de los compañeros son los cuatro botones, que
+   se prenden y apagan; en la tarjeta propia, solo se cuentan. */
+export function Reacciones({ reacciones, onReaccionar = null, chico = false, grande = false }) {
+  const t = useT()
+  const lista = onReaccionar ? REACCIONES : REACCIONES.filter(x => reacciones.cuenta[x.id] > 0)
+  const tam = chico ? 'text-sm px-2.5 py-1' : grande ? 'text-xl px-4 py-1.5' : 'text-base px-3 py-1'
+  return (
+    <div className={`flex flex-wrap gap-1.5 ${chico ? 'px-3 pb-2' : grande ? 'px-6 pb-3' : 'px-4 pb-3'}`}>
+      {lista.map(x => {
+        const n = reacciones.cuenta[x.id]
+        const mia = reacciones.mias?.[x.id] === true
+        const cuerpo = <><span aria-hidden="true">{x.emoji}</span> {t(`reaccion_${x.id}`)}{n > 0 && <b className="tabular-nums"> {n}</b>}</>
+        return onReaccionar ? (
+          <button key={x.id} type="button" onClick={() => onReaccionar(x.id, !mia)} aria-pressed={mia}
+            className={`rounded-full border font-semibold transition active:scale-95 ${tam} ${mia ? 'border-teal-600 bg-teal-50 text-teal-900' : 'border-slate-200 bg-white text-slate-700'}`}>
+            {cuerpo}
+          </button>
+        ) : (
+          <span key={x.id} className={`rounded-full bg-slate-100 font-semibold text-slate-700 ${tam}`}>{cuerpo}</span>
+        )
+      })}
     </div>
   )
 }

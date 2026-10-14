@@ -24,7 +24,7 @@ import { claveDe, palabrasDe, progreso } from './crucigrama.js'
 import { claveSopa, palabrasSopa } from './sopa.js'
 import { comoLista } from './sala.js'
 import { fondoPizarraValido } from './pizarra.js'
-import { columnaDe, columnasDe, comentariosPorPublicacion, esTablero } from './tablero.js'
+import { columnaDe, columnasDe, comentariosPorPublicacion, esTablero, reaccionesDe } from './tablero.js'
 import { limpiarObjetivo, limpiarTitulo } from './materiales.js'
 
 export const DIAS = 15
@@ -98,7 +98,7 @@ export const resultadoDe = (a, respuestas, moderacion, extra = {}) => {
 /* LA ABIERTA COMO TABLERO: cada publicación con su foto chica (la de los
    celulares: alcanza para el PDF y no infla el resumen) y sus comentarios.
    Los nombres van solo si la actividad los mostraba en el proyector. */
-const tableroDe = (a, respuestas, moderacion, { minis, comentarios, participantes } = {}) => {
+const tableroDe = (a, respuestas, moderacion, { minis, comentarios, reacciones, participantes } = {}) => {
   const nombres = a.nombres === true
   const columnas = columnasDe(a)
   const porPublicacion = comentariosPorPublicacion(comentarios, participantes)
@@ -109,8 +109,15 @@ const tableroDe = (a, respuestas, moderacion, { minis, comentarios, participante
       ...(columnas.length ? { columna: columnaDe(r, columnas.length) } : {}),
       ...(r.foto && typeof minis?.[r.pid] === 'string' ? { foto: minis[r.pid] } : {}),
       comentarios: (porPublicacion[r.pid] || []).map(c => ({ texto: c.texto, ...(nombres && c.nombre ? { nombre: c.nombre } : {}) })),
+      ...reaccionesParaResumen(a, reacciones?.[r.pid], r.pid),
     }))
   return { tipo: a.tipo, pregunta: a.pregunta, publicaciones, ...(columnas.length ? { columnas } : {}), ...(nombres ? { nombres: true } : {}) }
+}
+
+const reaccionesParaResumen = (a, deLaPublicacion, autor) => {
+  if (!a.reacciones) return {}
+  const { cuenta, total } = reaccionesDe(deLaPublicacion, autor)
+  return total ? { reacciones: cuenta } : {}
 }
 
 const aprobadas = (respuestas, moderacion) => abiertas(respuestas, moderacion?.abiertas, {}, moderacion?.correcciones).aprobadas
@@ -134,7 +141,7 @@ const paginasConAlgo = (pizarra) => {
 export const armarResumen = (sala, ahora) => {
   const actividades = comoLista(sala?.actividades)
     .map(a => resultadoDe(a, sala?.respuestas?.[a.id], sala?.moderacion?.[a.id], {
-      minis: sala?.minis?.[a.id], comentarios: sala?.comentarios?.[a.id], participantes: sala?.participantes,
+      minis: sala?.minis?.[a.id], comentarios: sala?.comentarios?.[a.id], reacciones: sala?.reacciones?.[a.id], participantes: sala?.participantes,
     }))
     .filter(r => r && tieneAlgo(r))
   const titulo = limpiarTitulo(sala?.clase?.titulo)

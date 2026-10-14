@@ -480,6 +480,7 @@ function Presentar({ store, base, pin, clave, idx, actividad, actividades, onlin
   const tablero = esTablero(actividad)
   const fotos = useValue(store, tablero && actividad.foto ? `${base}/fotos/${aid}` : null)
   const comentarios = useValue(store, tablero && actividad.comentarios ? `${base}/comentarios/${aid}` : null)
+  const reacciones = useValue(store, tablero && actividad.reacciones ? `${base}/reacciones/${aid}` : null)
   const miniaturas = useValue(store, tablero && actividad.foto && estado.moderando ? `${base}/minis/${aid}` : null)
   /* La moderación proyectada es de la sala, no de esta pestaña: se prende y
      apaga desde aquí o desde la tablet (Mod.jsx). */
@@ -559,11 +560,11 @@ function Presentar({ store, base, pin, clave, idx, actividad, actividades, onlin
           ) : estado.resultados ? (
             sinPanel
               ? <Resultados actividad={actividad} respuestas={respuestas} moderacion={moderacion} sobreFondo={conFondo}
-                  tablero={tablero ? { fotos, comentarios, participantes } : null} />
+                  tablero={tablero ? { fotos, comentarios, reacciones, participantes } : null} />
               : (
                 <div className={`${panel} ${conFondo ? `p-8 ${actividad.tipo === 'nube' ? 'max-w-full' : 'w-full max-w-5xl'}` : 'w-full flex justify-center'}`}>
                   <Resultados actividad={actividad} respuestas={respuestas} moderacion={moderacion}
-                    tablero={tablero ? { fotos, comentarios, participantes } : null} />
+                    tablero={tablero ? { fotos, comentarios, reacciones, participantes } : null} />
                 </div>
               )
           ) : (
@@ -673,7 +674,7 @@ function Resultados({ actividad, respuestas, moderacion, sobreFondo = false, tab
     const { aprobadas: publicaciones } = abiertas(respuestas, moderacion?.abiertas, tablero.participantes, moderacion?.correcciones, actividad.sinModerar === true)
     return (
       <Tablero actividad={actividad} publicaciones={publicaciones} fotos={tablero.fotos}
-        comentarios={comentariosPorPublicacion(tablero.comentarios, tablero.participantes)}
+        comentarios={comentariosPorPublicacion(tablero.comentarios, tablero.participantes)} reacciones={tablero.reacciones}
         vista={vistaDe(actividad, moderacion)} verCambios={seVenCorrecciones(moderacion)} borrador={moderacion?.borrador} sobreFondo={sobreFondo} />
     )
   }

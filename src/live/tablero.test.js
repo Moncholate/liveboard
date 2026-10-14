@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   celularVeElMuro, columnaDe, columnasDe, comentariosDe, comentariosPorPublicacion, esTablero, fotoValida, medidasFoto, opcionesLimpias,
-  porColumna, vistaDe, vistasDe,
+  porColumna, reaccionesDe, vistaDe, vistasDe,
 } from './tablero.js'
 import { abiertas, limpiarActividad } from './logic.js'
 import { resultadoDe, tieneAlgo } from './resumen.js'
@@ -124,5 +124,27 @@ describe('el resumen', () => {
     const r = resultadoDe({ ...a, nombres: true }, respuestas, {}, extra)
     expect(r.publicaciones[0]).toMatchObject({ nombre: 'Ana', comentarios: [{ texto: 'There is a plant', nombre: 'Luis' }] })
     expect(r.nombres).toBe(true)
+  })
+})
+
+describe('reacciones', () => {
+  it('se cuentan por tipo, sin las del autor, y se marcan las mías', () => {
+    const r = reaccionesDe({ b: { bien: true, duda: true }, c: { bien: true, raro: true }, a: { idea: true } }, 'a', 'b')
+    expect(r.cuenta).toEqual({ bien: 2, idea: 0, duda: 1, revisa: 0 })
+    expect(r.mias).toEqual({ bien: true, duda: true })
+    expect(r.total).toBe(3)
+  })
+  it('sin reacciones, todo en cero', () => {
+    expect(reaccionesDe(undefined, 'a').total).toBe(0)
+  })
+  it('prenden el muro en el celular y se guardan como opción', () => {
+    expect(celularVeElMuro({ reacciones: true })).toBe(true)
+    expect(opcionesLimpias({ tipo: 'abierta', reacciones: true })).toEqual({ reacciones: true })
+  })
+  it('van al resumen solo si la actividad las tiene', () => {
+    const a = { id: 'x', tipo: 'abierta', pregunta: 'p', reacciones: true, sinModerar: true }
+    const r = resultadoDe(a, { p: { texto: 'hola', at: 1 } }, {}, { reacciones: { p: { q: { idea: true } } } })
+    expect(r.publicaciones[0].reacciones).toEqual({ bien: 0, idea: 1, duda: 0, revisa: 0 })
+    expect(resultadoDe({ ...a, reacciones: undefined, foto: true }, { p: { texto: 'hola', at: 1 } }, {}, { reacciones: { p: { q: { idea: true } } } }).publicaciones[0].reacciones).toBeUndefined()
   })
 })

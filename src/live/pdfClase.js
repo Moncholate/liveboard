@@ -11,6 +11,7 @@
    ========================================================================== */
 import { ALTERNATIVAS } from './logic.js'
 import { NIVELES } from './cierres.js'
+import { REACCIONES } from './tablero.js'
 import { traducir } from '../i18n.jsx'
 import { imagenesDePagina } from './imagenPizarra.js'
 
@@ -162,6 +163,9 @@ export async function descargarPdf(resumen) {
           }
           if (p.texto) parrafo(p.texto, { size: 12, bold: true, gap: p.nombre ? 0.5 : 2 })
           if (p.nombre) parrafo(p.nombre, { size: 9, color: GRIS, gap: 2 })
+          /* Las reacciones por su nombre: los emojis no están en la letra del PDF. */
+          const reac = REACCIONES.filter(x => p.reacciones?.[x.id] > 0).map(x => `${t(`reaccion_${x.id}`)} ${p.reacciones[x.id]}`)
+          if (reac.length) parrafo(reac.join('   ·   '), { size: 9, bold: true, color: TEAL, gap: 2 })
           p.comentarios.forEach(c => vineta(c.nombre ? `${c.nombre}: ${c.texto}` : c.texto))
           y += 3
         }

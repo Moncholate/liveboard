@@ -13,6 +13,7 @@ import { ProveedorIdioma, idiomaDelNavegador, traducir, useT } from '../i18n.jsx
 import { ALTERNATIVAS } from '../live/logic.js'
 import { LAMPARA, NIVELES } from '../live/cierres.js'
 import { rutaResumen } from '../live/resumen.js'
+import { REACCIONES } from '../live/tablero.js'
 import { imagenesDePagina } from '../live/imagenPizarra.js'
 import { useTema } from '../tema.jsx'
 
@@ -140,6 +141,13 @@ function Actividad({ a, n }) {
           {a.columnas.length > 0 && <p className="text-xs font-bold uppercase tracking-wider text-teal-800">{a.columnas[p.columna || 0]}</p>}
           {p.texto && <p className="font-semibold text-slate-800 break-words">{p.texto}</p>}
           {p.nombre && <p className="text-sm text-slate-500">{p.nombre}</p>}
+          {p.reacciones && (
+            <p className="flex flex-wrap gap-1.5">
+              {REACCIONES.filter(x => p.reacciones[x.id] > 0).map(x => (
+                <span key={x.id} className="rounded-full bg-slate-100 px-2.5 py-0.5 text-sm font-semibold text-slate-700">{x.emoji} {t(`reaccion_${x.id}`)} <b>{p.reacciones[x.id]}</b></span>
+              ))}
+            </p>
+          )}
           {p.comentarios.length > 0 && (
             <ul className="mt-1 border-t border-slate-100 pt-2 flex flex-col gap-1">
               {p.comentarios.map((c, j) => <li key={j} className="text-sm text-slate-800 break-words">{c.nombre && <b className="text-slate-600">{c.nombre}: </b>}{c.texto}</li>)}

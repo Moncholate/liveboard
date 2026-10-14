@@ -31,6 +31,7 @@ import { accionesDeSala, comoLista, raiz } from '../live/sala.js'
 import { TarjetaPublicacion, colorColumna } from '../live/Tablero.jsx'
 import {
   LIMITES_TABLERO, celularVeElMuro, columnaDe, columnasDe, comentariosDe, comentariosPorPublicacion, esTablero, limpiarComentario,
+  reaccionesDe,
 } from '../live/tablero.js'
 import { esGroseria } from '../live/groserias.js'
 import { useTema } from '../tema.jsx'
@@ -864,6 +865,7 @@ function ResponderTablero({ store, pin, base, pid, actividad, abierta }) {
   const minis = useValue(store, actividad.foto && veMuro ? `${base}/minis/${aid}` : null)
   const miMini = useValue(store, actividad.foto && !veMuro ? `${base}/minis/${aid}/${pid}` : null)
   const comentarios = useValue(store, actividad.comentarios ? `${base}/comentarios/${aid}` : null)
+  const reacciones = useValue(store, actividad.reacciones ? `${base}/reacciones/${aid}` : null)
   const participantes = useValue(store, actividad.nombres && veMuro ? `${base}/participantes` : null)
   const [editando, setEditando] = useState(false)
   if (mia === undefined) return <Center>{t('cargando')}</Center>
@@ -874,6 +876,7 @@ function ResponderTablero({ store, pin, base, pid, actividad, abierta }) {
   const corregida = correccionVigente(correccion, original)
   const enPantalla = decision === true || (alInstante && decision !== false && !esGroseria(original))
   const puedeEditar = abierta && (alInstante || decision !== true)
+  const estadoMio = decision === false ? t('profeLaQuito') : enPantalla ? null : t('enRevision')
 
   const publicar = async ({ texto, columna, foto }) => {
     const ruta = (n) => `${base}/${n}/${aid}/${pid}`
@@ -894,62 +897,95 @@ function ResponderTablero({ store, pin, base, pid, actividad, abierta }) {
     await acciones.borrarPublicacion(aid, pid)
     setEditando(false)
   }
+  const editar = () => { setEditando(true); scrollTo({ top: 0, behavior: 'smooth' }) }
 
   const columnas = columnasDe(actividad)
   const suColumna = (r) => { const i = columnaDe(r, columnas.length); return columnas.length ? { nombre: columnas[i], i } : null }
-  const yo = mia && { pid, texto: corregida || original, original, corregida: Boolean(corregida), foto: mia.foto === true, columna: mia.columna }
-  const publicaciones = veMuro && respuestas !== undefined && moderacion !== undefined
+  const yo = mia && {
+    pid, texto: corregida || original, original, corregida: Boolean(corregida), foto: mia.foto === true, columna: mia.columna,
+    nombre: participantes?.[pid]?.nombre || '', at: typeof mia.desde === 'number' ? mia.desde : 0,
+  }
+  /* EL TABLERO EN EL CELULAR (14-oct-2026): después de publicar se pasa
+     directo al tablero; la tarjeta propia ya no queda fija arriba (ocupaba
+     media pantalla y repetía lo mismo). Se busca en el tablero, donde trae
+     «Editar» y «Borrar». Si todavía espera la revisión del docente o la
+     quitó, igual aparece ahí, con su estado: si no, se perdería. */
+  const aprobadas = veMuro && respuestas !== undefined && moderacion !== undefined
     ? abiertas(respuestas, moderacion?.abiertas, participantes || {}, moderacion?.correcciones, alInstante).aprobadas
     : []
+  const publicaciones = yo && !aprobadas.some(r => r.pid === pid)
+    ? [...aprobadas, yo].sort((a, b) => a.at - b.at)
+    : aprobadas
   const porPublicacion = comentariosPorPublicacion(comentarios, participantes || {}, { yo: pid })
   const quedanComentarios = comentariosDe(comentarios, pid) < LIMITES_TABLERO.comentariosPorPersona
+  const formulario = abierta
+    ? <FormPublicacion actividad={actividad} inicial={mia} fotoInicial={mia?.foto ? fotoMia : null}
+        onPublicar={publicar} onCancelar={mia ? () => setEditando(false) : null} />
+    : <p className="rounded-2xl bg-slate-100 p-4 text-center font-semibold text-slate-600">{t('respuestasCerradas')}</p>
+
+  /* Sin tablero a la vista (sin comentarios, sin reacciones y con revisión),
+     no hay dónde buscarla: la propia se muestra sola, como antes. */
+  if (!veMuro) {
+    return (
+      <div className="flex-1 flex flex-col gap-4">
+        <h1 className="text-2xl font-black text-slate-900 leading-snug">{tituloDe(actividad, t)}</h1>
+        {actividad.nombres && <p className="-mt-2 text-sm text-slate-500">{t('tuNombreSeVe')}</p>}
+        {(!mia || editando) ? formulario : (
+          <section className="flex flex-col gap-2">
+            <div className="rounded-2xl bg-teal-700 text-white px-4 py-3 text-center">
+              <p className="text-2xl font-black">{t('listoGrande')}</p>
+              <p className="text-teal-50">{estadoMio || t('enElMuro')}</p>
+            </div>
+            <TarjetaPublicacion r={yo} foto={fotoMia} chico verComentarios={false} columna={suColumna(yo)} />
+            {corregida && <p className="text-sm font-bold text-teal-800">✎ {t('profeCorrigio')}</p>}
+            {abierta && (
+              <div className="grid grid-cols-2 gap-2">
+                {puedeEditar ? <Button variant="ghost" onClick={editar}>{t('editar')}</Button> : <span />}
+                <Button variant="ghost" onClick={borrar}>{t('borrar')}</Button>
+              </div>
+            )}
+          </section>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="flex-1 flex flex-col gap-4">
       <h1 className="text-2xl font-black text-slate-900 leading-snug">{tituloDe(actividad, t)}</h1>
-      {actividad.nombres && <p className="-mt-2 text-sm text-slate-500">{t('tuNombreSeVe')}</p>}
+      {actividad.nombres && (!mia || editando) && <p className="-mt-2 text-sm text-slate-500">{t('tuNombreSeVe')}</p>}
+      {(!mia || editando) && formulario}
 
-      {(!mia || editando) ? (
-        abierta
-          ? <FormPublicacion actividad={actividad} inicial={mia} fotoInicial={mia?.foto ? fotoMia : null}
-              onPublicar={publicar} onCancelar={mia ? () => setEditando(false) : null} />
-          : <p className="rounded-2xl bg-slate-100 p-4 text-center font-semibold text-slate-600">{t('respuestasCerradas')}</p>
-      ) : (
-        <section className="flex flex-col gap-2">
-          <div className="rounded-2xl bg-teal-700 text-white px-4 py-3 text-center">
-            <p className="text-2xl font-black">{t('listoGrande')}</p>
-            <p className="text-teal-50">{decision === false ? t('profeLaQuito') : enPantalla ? t('enElMuro') : t('profeRevisa')}</p>
-          </div>
-          <TarjetaPublicacion r={yo} foto={fotoMia} chico verComentarios={false} columna={suColumna(yo)} />
-          {corregida && <p className="text-sm font-bold text-teal-800">✎ {t('profeCorrigio')}</p>}
-          {abierta && (
-            <div className="grid grid-cols-2 gap-2">
-              {puedeEditar ? <Button variant="ghost" onClick={() => setEditando(true)}>{t('editar')}</Button> : <span />}
-              <Button variant="ghost" onClick={borrar}>{t('borrar')}</Button>
-            </div>
-          )}
-        </section>
-      )}
-
-      {veMuro && (
-        <section className="flex flex-col gap-3">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">{t('elMuro')} · {publicaciones.length}</h2>
-          {publicaciones.length === 0 && <p className="text-sm text-slate-500">{t('muroVacioCelular')}</p>}
-          {publicaciones.map(r => (
+      <section className="flex flex-col gap-3">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">{t('elMuro')} · {publicaciones.length}</h2>
+        {publicaciones.length === 0 && <p className="text-sm text-slate-500">{t('muroVacioCelular')}</p>}
+        {publicaciones.map(r => {
+          const propia = r.pid === pid
+          return (
             <PublicacionEnCelular key={r.pid} r={r} foto={minis?.[r.pid]} actividad={actividad} columna={suColumna(r)}
               comentarios={porPublicacion[r.pid] || []} puedeComentar={abierta && actividad.comentarios === true}
               quedan={quedanComentarios}
-              onComentar={(cid, texto) => acciones.comentar(aid, cid || idAlAzar(), { de: pid, en: r.pid, texto })} />
-          ))}
-        </section>
-      )}
+              reacciones={actividad.reacciones ? reaccionesDe(reacciones?.[r.pid], r.pid, pid) : null}
+              onReaccionar={actividad.reacciones && abierta && !propia ? (tipo, si) => acciones.reaccionar(aid, r.pid, pid, tipo, si) : null}
+              onComentar={(cid, texto) => acciones.comentar(aid, cid || idAlAzar(), { de: pid, en: r.pid, texto })}
+              propia={propia && {
+                estado: estadoMio,
+                corregida: Boolean(corregida),
+                editando,
+                onEditar: puedeEditar ? editar : null,
+                onBorrar: abierta ? borrar : null,
+              }} />
+          )
+        })}
+      </section>
     </div>
   )
 }
 
-/* Una publicación en el muro del celular, con sus comentarios: los propios
-   se editan o se borran ahí mismo. */
-function PublicacionEnCelular({ r, foto, actividad, columna, comentarios, puedeComentar, quedan, onComentar }) {
+/* Una publicación en el muro del celular, con sus reacciones y sus
+   comentarios: los comentarios propios se editan o se borran ahí mismo. La
+   tarjeta propia se marca («Tu publicación») y trae Editar y Borrar. */
+function PublicacionEnCelular({ r, foto, actividad, columna, comentarios, puedeComentar, quedan, onComentar, reacciones, onReaccionar, propia }) {
   const t = useT()
   const [texto, setTexto] = useState('')
   const [editando, setEditando] = useState(null) // cid del comentario propio que se edita
@@ -961,8 +997,24 @@ function PublicacionEnCelular({ r, foto, actividad, columna, comentarios, puedeC
     setEnviando(true)
     try { await onComentar(editando, limpio); setTexto(''); setEditando(null) } finally { setEnviando(false) }
   }
+  const encabezado = propia && (
+    <div className="flex items-center gap-2 px-3 py-2 bg-teal-50 border-b border-teal-100">
+      <span className="flex-1 min-w-0">
+        <span className="block text-xs font-black uppercase tracking-wider text-teal-800">{t('tuPublicacion')}</span>
+        {propia.estado && <span className="block text-xs font-semibold text-amber-900">{propia.estado}</span>}
+        {propia.corregida && <span className="block text-xs font-semibold text-teal-800">✎ {t('profeCorrigio')}</span>}
+      </span>
+      {propia.onEditar && !propia.editando && (
+        <button type="button" onClick={propia.onEditar} className="rounded-lg border border-teal-600 bg-white px-3 py-1 text-sm font-bold text-teal-800">{t('editar')}</button>
+      )}
+      {propia.onBorrar && (
+        <button type="button" onClick={propia.onBorrar} className="rounded-lg border border-slate-300 bg-white px-3 py-1 text-sm font-bold text-slate-700">{t('borrar')}</button>
+      )}
+    </div>
+  )
   return (
     <TarjetaPublicacion r={r} foto={foto} chico nombres={actividad.nombres === true} comentarios={comentarios} columna={columna}
+      encabezado={encabezado} reacciones={reacciones} onReaccionar={onReaccionar}
       pieComentario={(c) => c.mio && puedeComentar && (
         <span className="ml-1.5 inline-flex gap-2 align-middle">
           <button onClick={() => { setEditando(c.cid); setTexto(c.texto) }} className="text-xs font-bold text-teal-800 underline">{t('editar')}</button>

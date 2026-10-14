@@ -11,6 +11,8 @@
      comentarios  los compañeros comentan las publicaciones
      nombres      cada tarjeta y cada comentario llevan el nombre de quien lo
                   escribió (como en Padlet; sin esto, la abierta es anónima)
+     reacciones   👍 Bien dicho, 💡 Buena idea, 🤔 No entendí, 🔍 Revisa algo:
+                  feedback a los compañeros, anónimo (se ve cuántas, no quién)
      sinModerar   se publica al instante; el docente edita o quita después.
                   Lo que el filtro marca como grosería espera igual.
      columnas     2 a 4 secciones («There is» / «There are», «Hall» /
@@ -21,6 +23,7 @@
      fotos/{aid}/{pid}         la foto para el proyector (JPEG, ~1280 px)
      minis/{aid}/{pid}         la misma, chica, para los celulares y el PDF
      comentarios/{aid}/{cid}   { de: pid, en: pid de la publicación, texto, at }
+     reacciones/{aid}/{pid de la publicación}/{pid de quien reacciona}/{tipo}  true
      moderacion/{aid}/vista    'muro' | 'cuadricula' | 'columnas' | 'lista'
 
    Dos tamaños de foto porque treinta celulares bajando treinta fotos grandes
@@ -44,7 +47,7 @@ export const LIMITES_TABLERO = {
 }
 
 /* Las opciones que se prenden con un sí. */
-export const OPCIONES = ['foto', 'comentarios', 'nombres', 'sinModerar']
+export const OPCIONES = ['foto', 'comentarios', 'reacciones', 'nombres', 'sinModerar']
 
 /** Las columnas de la actividad, limpias. Una sola no ordena nada: sin
     columnas. */
@@ -72,7 +75,7 @@ export const esTablero = (a) => a?.tipo === 'abierta' && (OPCIONES.some(k => a[k
 
 /** ¿Los celulares ven lo que publican los demás? Si se puede comentar, hay
     que verlo; si se publica al instante, también, como en Padlet. */
-export const celularVeElMuro = (a) => a?.comentarios === true || a?.sinModerar === true
+export const celularVeElMuro = (a) => a?.comentarios === true || a?.reacciones === true || a?.sinModerar === true
 
 /* ── Cómo se ordena en el proyector ──────────────────────────────────────── */
 
@@ -135,6 +138,38 @@ export const comentariosPorPublicacion = (comentarios, participantes = {}, { yo 
 
 /** Cuántos comentarios lleva escritos alguien en esta actividad. */
 export const comentariosDe = (comentarios, pid) => Object.values(comentarios || {}).filter(c => c?.de === pid).length
+
+/* ── Reacciones ─────────────────────────────────────────────────────────── */
+
+/* Reacciones PEDAGÓGICAS (14-oct-2026): no «me gusta», sino feedback que le
+   sirve al autor. Dos para reconocer y dos para mejorar. El docente eligió que
+   todas se vean, en el proyector y en los celulares; nunca quién reaccionó. */
+export const REACCIONES = [
+  { id: 'bien', emoji: '👍' },
+  { id: 'idea', emoji: '💡' },
+  { id: 'duda', emoji: '🤔' },
+  { id: 'revisa', emoji: '🔍' },
+]
+const TIPOS_REACCION = REACCIONES.map(r => r.id)
+
+/**
+ * Las reacciones de una publicación: cuántas de cada tipo y cuáles puso `yo`.
+ * `deLaPublicacion` = { pidDeQuienReacciona: { tipo: true } }. Las del propio
+ * autor no cuentan (no se reacciona a lo propio).
+ */
+export const reaccionesDe = (deLaPublicacion, autor, yo = null) => {
+  const cuenta = Object.fromEntries(TIPOS_REACCION.map(k => [k, 0]))
+  const mias = {}
+  for (const [quien, tipos] of Object.entries(deLaPublicacion || {})) {
+    if (quien === autor) continue
+    for (const k of TIPOS_REACCION) {
+      if (tipos?.[k] !== true) continue
+      cuenta[k]++
+      if (quien === yo) mias[k] = true
+    }
+  }
+  return { cuenta, mias, total: TIPOS_REACCION.reduce((s, k) => s + cuenta[k], 0) }
+}
 
 /* ── Fotos ───────────────────────────────────────────────────────────────── */
 
