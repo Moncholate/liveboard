@@ -38,6 +38,8 @@ import { porDestapar, progreso, umbral } from '../live/crucigrama.js'
 import { destapables } from '../live/sopa.js'
 import { leerTraida } from '../live/traida.js'
 import { Moderacion } from '../live/Moderacion.jsx'
+import { SelectorVista, Tablero } from '../live/Tablero.jsx'
+import { comentariosPorPublicacion, esTablero, vistaDe } from '../live/tablero.js'
 import { Editor } from './Editor.jsx'
 import { Cuenta, iniciarSesion } from './Cuenta.jsx'
 import { BotonTema, useTema } from '../tema.jsx'
@@ -473,6 +475,12 @@ function Presentar({ store, base, pin, clave, idx, actividad, actividades, onlin
   const aid = actividad.id
   const respuestas = useValue(store, aid ? `${base}/respuestas/${aid}` : null)
   const moderacion = useValue(store, aid ? `${base}/moderacion/${aid}` : null)
+  /* La abierta como tablero: las fotos grandes (el proyector es el único que
+     las baja) y los comentarios. */
+  const tablero = esTablero(actividad)
+  const fotos = useValue(store, tablero && actividad.foto ? `${base}/fotos/${aid}` : null)
+  const comentarios = useValue(store, tablero && actividad.comentarios ? `${base}/comentarios/${aid}` : null)
+  const miniaturas = useValue(store, tablero && actividad.foto && estado.moderando ? `${base}/minis/${aid}` : null)
   /* La moderación proyectada es de la sala, no de esta pestaña: se prende y
      apaga desde aquí o desde la tablet (Mod.jsx). */
   const moderando = Boolean(estado.moderando)
@@ -497,7 +505,7 @@ function Presentar({ store, base, pin, clave, idx, actividad, actividades, onlin
     if (nuevas.length) acciones.destapar(aid, nuevas)
   }, [cruci, respuestas, moderacion, enSala])
   const n = cuantosRespondieron(respuestas)
-  const aprobadasYPendientes = conTexto(actividad.tipo) ? abiertas(respuestas, moderacion?.abiertas)
+  const aprobadasYPendientes = conTexto(actividad.tipo) ? abiertas(respuestas, moderacion?.abiertas, {}, {}, actividad.sinModerar === true)
     : actividad.tipo === 'preguntas' ? preguntasDelCurso(respuestas, moderacion)
     : null
   const pendientes = aprobadasYPendientes?.pendientes.length || 0
@@ -522,6 +530,9 @@ function Presentar({ store, base, pin, clave, idx, actividad, actividades, onlin
           <div className="px-8 pt-6 flex items-center gap-3 text-slate-500">
             <span className="text-sm font-bold uppercase tracking-wider">{t(`tipo_${actividad.tipo}`)} · {t('deTotal', idx + 1, total)}</span>
             <span className="flex-1" />
+            {tablero && estado.resultados && (
+              <SelectorVista actividad={actividad} vista={vistaDe(actividad, moderacion)} onCambiar={(v) => acciones.vista(aid, v)} />
+            )}
             <JoinCorner pin={pin} />
           </div>
           <h1 className={`px-8 pt-2 font-black text-slate-900 leading-tight ${cruci ? 'text-3xl' : 'text-5xl'}`}><TextoConHuecos texto={tituloDe(actividad, t)} /></h1>
@@ -547,10 +558,12 @@ function Presentar({ store, base, pin, clave, idx, actividad, actividades, onlin
             </div>
           ) : estado.resultados ? (
             sinPanel
-              ? <Resultados actividad={actividad} respuestas={respuestas} moderacion={moderacion} sobreFondo={conFondo} />
+              ? <Resultados actividad={actividad} respuestas={respuestas} moderacion={moderacion} sobreFondo={conFondo}
+                  tablero={tablero ? { fotos, comentarios, participantes } : null} />
               : (
                 <div className={`${panel} ${conFondo ? `p-8 ${actividad.tipo === 'nube' ? 'max-w-full' : 'w-full max-w-5xl'}` : 'w-full flex justify-center'}`}>
-                  <Resultados actividad={actividad} respuestas={respuestas} moderacion={moderacion} />
+                  <Resultados actividad={actividad} respuestas={respuestas} moderacion={moderacion}
+                    tablero={tablero ? { fotos, comentarios, participantes } : null} />
                 </div>
               )
           ) : (
@@ -577,6 +590,8 @@ function Presentar({ store, base, pin, clave, idx, actividad, actividades, onlin
             {t('moderacionProyectada')}
           </p>
           <Moderacion actividad={actividad} respuestas={respuestas} moderacion={moderacion} participantes={participantes}
+            fotos={miniaturas} comentarios={comentarios}
+            onComentario={(c, texto) => acciones.comentar(aid, c.cid, { de: c.de, en: c.en, texto })}
             onPalabra={(clave, d) => acciones.moderarPalabra(aid, clave, d)}
             onAbierta={(pid, d) => acciones.decidirAbierta(aid, pid, d)}
             onAprobarVarias={(pids) => acciones.aprobarVarias(aid, pids)}
@@ -652,8 +667,16 @@ export function FasesApuesta({ fase, acciones, className = '' }) {
   return <Button variant="ghost" className={className} onClick={() => acciones.fase('apostar')}>{t('volverAApostar')}</Button>
 }
 
-function Resultados({ actividad, respuestas, moderacion, sobreFondo = false }) {
+function Resultados({ actividad, respuestas, moderacion, sobreFondo = false, tablero = null }) {
   const t = useT()
+  if (tablero) {
+    const { aprobadas: publicaciones } = abiertas(respuestas, moderacion?.abiertas, tablero.participantes, moderacion?.correcciones, actividad.sinModerar === true)
+    return (
+      <Tablero actividad={actividad} publicaciones={publicaciones} fotos={tablero.fotos}
+        comentarios={comentariosPorPublicacion(tablero.comentarios, tablero.participantes)}
+        vista={vistaDe(actividad, moderacion)} verCambios={seVenCorrecciones(moderacion)} borrador={moderacion?.borrador} sobreFondo={sobreFondo} />
+    )
+  }
   const aprobadas = () => abiertas(respuestas, moderacion?.abiertas, {}, moderacion?.correcciones).aprobadas
   switch (actividad.tipo) {
     case 'semaforo': return <div className="w-full max-w-5xl mx-auto"><Semaforo respuestas={respuestas} /></div>

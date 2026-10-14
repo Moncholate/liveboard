@@ -12,6 +12,7 @@
 import { esGroseria } from './groserias.js'
 import { limpiarCrucigrama, palabrasDe as palabrasCrucigrama } from './crucigrama.js'
 import { limpiarSopa, palabrasSopa } from './sopa.js'
+import { opcionesLimpias } from './tablero.js'
 
 /* Los tipos de actividad, en el orden en que se ofrecen. Sus nombres y su
    ayuda están en i18n.jsx (tipo_nube, ayuda_nube…), en los dos idiomas.
@@ -161,6 +162,8 @@ export const limpiarActividad = (a) => ({
   ...(a.tipo === 'apuesta' ? { consignas: consignasDe(a) } : {}),
   ...(a.tipo === 'crucigrama' ? limpiarCrucigrama(a) : {}),
   ...(a.tipo === 'sopa' ? limpiarSopa(a) : {}),
+  /* La abierta como tablero: foto, comentarios, nombres, columnas (tablero.js). */
+  ...opcionesLimpias(a),
 })
 
 /* ── Palabras ──────────────────────────────────────────────────────────── */
@@ -385,8 +388,16 @@ export const limpiarAbierta = (s) => String(s == null ? '' : s)
  * estudiante. Solo vale mientras el estudiante no haya cambiado su respuesta
  * (`de` tiene que ser igual a lo que hay ahora): corregir un texto que ya no
  * existe pisaría lo nuevo con algo viejo.
+ *
+ * `alInstante` (la abierta como tablero, con «publicar al instante»): lo que
+ * nadie revisó cuenta como aprobado, salvo lo que el filtro marcó. El docente
+ * igual puede quitarlo (decisión false).
+ *
+ * Como tablero, una publicación puede ser solo una foto (`foto`), va en una
+ * columna (`columna`) y se ordena por cuándo se publicó (`desde`), no por la
+ * última vez que se editó: editar no la manda al final del muro.
  */
-export const abiertas = (respuestas, decisiones = {}, participantes = {}, correcciones = {}) => {
+export const abiertas = (respuestas, decisiones = {}, participantes = {}, correcciones = {}, alInstante = false) => {
   const lista = Object.entries(respuestas || {})
     .map(([pid, r]) => {
       const original = limpiarAbierta(r?.texto)
@@ -396,17 +407,20 @@ export const abiertas = (respuestas, decisiones = {}, participantes = {}, correc
         texto: c || original,
         original,
         corregida: Boolean(c),
-        at: typeof r?.at === 'number' ? r.at : 0,
+        at: typeof r?.desde === 'number' ? r.desde : typeof r?.at === 'number' ? r.at : 0,
+        ...(r?.foto === true ? { foto: true } : {}),
+        ...(Number.isInteger(r?.columna) ? { columna: r.columna } : {}),
         nombre: participantes?.[pid]?.nombre || '',
         /* Antes / Ahora: los lados que escribió el estudiante (los que el
            docente dejó en blanco). `texto` es su «porque». */
         ...(limpiarLado(r?.antes) ? { antes: limpiarLado(r.antes) } : {}),
         ...(limpiarLado(r?.ahora) ? { ahora: limpiarLado(r.ahora) } : {}),
-        decision: decisiones?.[pid] === true ? true : decisiones?.[pid] === false ? false : null,
+        decision: decisiones?.[pid] === true ? true : decisiones?.[pid] === false ? false
+          : alInstante && !esGroseria(r?.texto) ? true : null,
         groseria: esGroseria(r?.texto),
       }
     })
-    .filter(r => r.original)
+    .filter(r => r.original || r.foto)
     .sort((a, b) => a.at - b.at || a.pid.localeCompare(b.pid))
   return {
     pendientes: lista.filter(r => r.decision === null),

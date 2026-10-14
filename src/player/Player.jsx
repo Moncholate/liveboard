@@ -12,12 +12,12 @@
    IDIOMA: antes de entrar no se sabe a qué sala va, así que la entrada usa el
    del navegador (y se puede cambiar). Ya dentro, manda el de la sala.
    ========================================================================== */
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore, useValue } from '../net/hooks.js'
 import { Button, Center, Logo } from '../ui.jsx'
 import { ProveedorIdioma, SelectorIdioma, idiomaDelNavegador, traducir, useT, valido } from '../i18n.jsx'
 import {
-  ALTERNATIVAS, LIMITES, conTexto, consignasDe, correccionVigente, idAlAzar, limpiarAbierta, limpiarLado, nombreValido, palabrasDe,
+  ALTERNATIVAS, LIMITES, abiertas, conTexto, consignasDe, correccionVigente, idAlAzar, limpiarAbierta, limpiarLado, nombreValido, palabrasDe,
   partirEnHuecos, preguntasDelCurso, tituloDe,
 } from '../live/logic.js'
 import { LAMPARA, NIVELES, faseApuesta, largoHueco, miCalibracion, moldeCompleto, textoDeMolde } from '../live/cierres.js'
@@ -27,7 +27,12 @@ import { acierta, casillasDe, claveDe, palabrasDe as palabrasCrucigrama, soloLet
 import { Cambios } from '../live/Cambios.jsx'
 import { BotonPdf, normalizar } from './Clase.jsx'
 import { rutaResumen, urlResumen } from '../live/resumen.js'
-import { comoLista, raiz } from '../live/sala.js'
+import { accionesDeSala, comoLista, raiz } from '../live/sala.js'
+import { TarjetaPublicacion, colorColumna } from '../live/Tablero.jsx'
+import {
+  LIMITES_TABLERO, celularVeElMuro, columnaDe, columnasDe, comentariosDe, comentariosPorPublicacion, esTablero, limpiarComentario,
+} from '../live/tablero.js'
+import { esGroseria } from '../live/groserias.js'
 import { useTema } from '../tema.jsx'
 
 /* sessionStorage y no localStorage: cada pestaña es un estudiante distinto, y
@@ -137,7 +142,7 @@ function EnSala({ store, pin, pid, onFuera }) {
         <main className="flex-1 flex flex-col p-4 max-w-md w-full mx-auto">
           {resumenId && <AvisoClase key={resumenId} store={store} id={resumenId} />}
           {actividad
-            ? <Responder key={actividad.id} store={store} base={base} pid={pid} actividad={actividad} abierta={Boolean(estado.abierta)} fase={faseApuesta(estado)} />
+            ? <Responder key={actividad.id} store={store} pin={pin} base={base} pid={pid} actividad={actividad} abierta={Boolean(estado.abierta)} fase={faseApuesta(estado)} />
             : <Espera />}
         </main>
       </div>
@@ -150,7 +155,8 @@ function Espera() {
   return <Center><p className="text-2xl font-bold text-slate-800">{t('estasDentro')}</p><p className="mt-2">{t('miraPantalla')}</p></Center>
 }
 
-function Responder({ store, base, pid, actividad, abierta, fase }) {
+function Responder({ store, pin, base, pid, actividad, abierta, fase }) {
+  if (esTablero(actividad)) return <ResponderTablero store={store} pin={pin} base={base} pid={pid} actividad={actividad} abierta={abierta} />
   if (actividad.tipo === 'preguntas') return <PreguntarYVotar store={store} base={base} pid={pid} actividad={actividad} abierta={abierta} />
   if (actividad.tipo === 'sopa') return <ResponderSopa store={store} base={base} pid={pid} actividad={actividad} abierta={abierta} />
   if (actividad.tipo === 'crucigrama') return <ResponderCrucigrama store={store} base={base} pid={pid} actividad={actividad} abierta={abierta} />
@@ -834,5 +840,230 @@ function AvisoClase({ store, id }) {
       {resumen ? <BotonPdf resumen={resumen} /> : <Button disabled>{t('cargando')}</Button>}
       <a href={urlResumen(id)} target="_blank" rel="noopener" className="text-sm font-semibold text-teal-800 underline underline-offset-2 self-center">{t('verClase')}</a>
     </div>
+  )
+}
+
+/* ── La abierta como tablero (tablero.js) ────────────────────────────────── */
+
+/* Como en Padlet: cada uno publica una tarjeta —texto, foto o los dos, en la
+   columna que elija— y, si la actividad lo deja, ve las de los demás y las
+   comenta. Lo suyo lo edita o lo borra mientras las respuestas estén abiertas.
+   Con moderación, lo que el docente ya puso en pantalla no se edita: se
+   cambiaría delante de todos sin que nadie lo revisara. */
+function ResponderTablero({ store, pin, base, pid, actividad, abierta }) {
+  const t = useT()
+  const aid = actividad.id
+  const acciones = useMemo(() => accionesDeSala(store, pin), [store, pin])
+  const veMuro = celularVeElMuro(actividad)
+  const mia = useValue(store, `${base}/respuestas/${aid}/${pid}`)
+  const decision = useValue(store, `${base}/moderacion/${aid}/abiertas/${pid}`)
+  const correccion = useValue(store, `${base}/moderacion/${aid}/correcciones/${pid}`)
+  const respuestas = useValue(store, veMuro ? `${base}/respuestas/${aid}` : null)
+  const moderacion = useValue(store, veMuro ? `${base}/moderacion/${aid}` : null)
+  /* Las fotos chicas: todas si se ve el muro; si no, solo la propia. */
+  const minis = useValue(store, actividad.foto && veMuro ? `${base}/minis/${aid}` : null)
+  const miMini = useValue(store, actividad.foto && !veMuro ? `${base}/minis/${aid}/${pid}` : null)
+  const comentarios = useValue(store, actividad.comentarios ? `${base}/comentarios/${aid}` : null)
+  const participantes = useValue(store, actividad.nombres && veMuro ? `${base}/participantes` : null)
+  const [editando, setEditando] = useState(false)
+  if (mia === undefined) return <Center>{t('cargando')}</Center>
+
+  const fotoMia = veMuro ? minis?.[pid] : miMini
+  const alInstante = actividad.sinModerar === true
+  const original = limpiarAbierta(mia?.texto)
+  const corregida = correccionVigente(correccion, original)
+  const enPantalla = decision === true || (alInstante && decision !== false && !esGroseria(original))
+  const puedeEditar = abierta && (alInstante || decision !== true)
+
+  const publicar = async ({ texto, columna, foto }) => {
+    const ruta = (n) => `${base}/${n}/${aid}/${pid}`
+    /* La foto primero: así la tarjeta no llega al proyector sin ella. */
+    if (foto && foto !== 'igual') await Promise.all([store.set(ruta('fotos'), foto.grande), store.set(ruta('minis'), foto.chica)])
+    if (!foto) await Promise.all([store.remove(ruta('fotos')), store.remove(ruta('minis'))])
+    await store.set(ruta('respuestas'), {
+      ...(texto ? { texto } : {}),
+      ...(foto ? { foto: true } : {}),
+      ...(Number.isInteger(columna) ? { columna } : {}),
+      desde: typeof mia?.desde === 'number' ? mia.desde : store.stamp(),
+      at: store.stamp(),
+    })
+    setEditando(false)
+  }
+  const borrar = async () => {
+    if (!confirm(t('borrarPublicacionConfirma'))) return
+    await acciones.borrarPublicacion(aid, pid)
+    setEditando(false)
+  }
+
+  const columnas = columnasDe(actividad)
+  const suColumna = (r) => { const i = columnaDe(r, columnas.length); return columnas.length ? { nombre: columnas[i], i } : null }
+  const yo = mia && { pid, texto: corregida || original, original, corregida: Boolean(corregida), foto: mia.foto === true, columna: mia.columna }
+  const publicaciones = veMuro && respuestas !== undefined && moderacion !== undefined
+    ? abiertas(respuestas, moderacion?.abiertas, participantes || {}, moderacion?.correcciones, alInstante).aprobadas
+    : []
+  const porPublicacion = comentariosPorPublicacion(comentarios, participantes || {}, { yo: pid })
+  const quedanComentarios = comentariosDe(comentarios, pid) < LIMITES_TABLERO.comentariosPorPersona
+
+  return (
+    <div className="flex-1 flex flex-col gap-4">
+      <h1 className="text-2xl font-black text-slate-900 leading-snug">{tituloDe(actividad, t)}</h1>
+      {actividad.nombres && <p className="-mt-2 text-sm text-slate-500">{t('tuNombreSeVe')}</p>}
+
+      {(!mia || editando) ? (
+        abierta
+          ? <FormPublicacion actividad={actividad} inicial={mia} fotoInicial={mia?.foto ? fotoMia : null}
+              onPublicar={publicar} onCancelar={mia ? () => setEditando(false) : null} />
+          : <p className="rounded-2xl bg-slate-100 p-4 text-center font-semibold text-slate-600">{t('respuestasCerradas')}</p>
+      ) : (
+        <section className="flex flex-col gap-2">
+          <div className="rounded-2xl bg-teal-700 text-white px-4 py-3 text-center">
+            <p className="text-2xl font-black">{t('listoGrande')}</p>
+            <p className="text-teal-50">{decision === false ? t('profeLaQuito') : enPantalla ? t('enElMuro') : t('profeRevisa')}</p>
+          </div>
+          <TarjetaPublicacion r={yo} foto={fotoMia} chico verComentarios={false} columna={suColumna(yo)} />
+          {corregida && <p className="text-sm font-bold text-teal-800">✎ {t('profeCorrigio')}</p>}
+          {abierta && (
+            <div className="grid grid-cols-2 gap-2">
+              {puedeEditar ? <Button variant="ghost" onClick={() => setEditando(true)}>{t('editar')}</Button> : <span />}
+              <Button variant="ghost" onClick={borrar}>{t('borrar')}</Button>
+            </div>
+          )}
+        </section>
+      )}
+
+      {veMuro && (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">{t('elMuro')} · {publicaciones.length}</h2>
+          {publicaciones.length === 0 && <p className="text-sm text-slate-500">{t('muroVacioCelular')}</p>}
+          {publicaciones.map(r => (
+            <PublicacionEnCelular key={r.pid} r={r} foto={minis?.[r.pid]} actividad={actividad} columna={suColumna(r)}
+              comentarios={porPublicacion[r.pid] || []} puedeComentar={abierta && actividad.comentarios === true}
+              quedan={quedanComentarios}
+              onComentar={(cid, texto) => acciones.comentar(aid, cid || idAlAzar(), { de: pid, en: r.pid, texto })} />
+          ))}
+        </section>
+      )}
+    </div>
+  )
+}
+
+/* Una publicación en el muro del celular, con sus comentarios: los propios
+   se editan o se borran ahí mismo. */
+function PublicacionEnCelular({ r, foto, actividad, columna, comentarios, puedeComentar, quedan, onComentar }) {
+  const t = useT()
+  const [texto, setTexto] = useState('')
+  const [editando, setEditando] = useState(null) // cid del comentario propio que se edita
+  const [enviando, setEnviando] = useState(false)
+  const limpio = limpiarComentario(texto)
+  const enviar = async (e) => {
+    e.preventDefault()
+    if (!limpio || enviando || (!editando && !quedan)) return
+    setEnviando(true)
+    try { await onComentar(editando, limpio); setTexto(''); setEditando(null) } finally { setEnviando(false) }
+  }
+  return (
+    <TarjetaPublicacion r={r} foto={foto} chico nombres={actividad.nombres === true} comentarios={comentarios} columna={columna}
+      pieComentario={(c) => c.mio && puedeComentar && (
+        <span className="ml-1.5 inline-flex gap-2 align-middle">
+          <button onClick={() => { setEditando(c.cid); setTexto(c.texto) }} className="text-xs font-bold text-teal-800 underline">{t('editar')}</button>
+          <button onClick={() => onComentar(c.cid, '')} className="text-xs font-bold text-slate-500 underline">{t('borrar')}</button>
+        </span>
+      )}>
+      {puedeComentar && (editando || quedan) && (
+        <form onSubmit={enviar} className="flex gap-2 px-3 pb-3 pt-1">
+          <input value={texto} maxLength={LIMITES_TABLERO.comentario} onChange={(e) => setTexto(e.target.value)}
+            placeholder={editando ? t('editaTuComentario') : t('escribeComentario')} aria-label={t('escribeComentario')}
+            className="flex-1 min-w-0 rounded-xl border-2 border-slate-200 px-3 py-2 focus:border-teal-600 outline-none" />
+          {editando && <button type="button" onClick={() => { setEditando(null); setTexto('') }} className="text-sm font-bold text-slate-500">{t('cancelar')}</button>}
+          <Button disabled={!limpio || enviando} className="!px-3 !py-2 text-sm">{editando ? t('guardar') : t('comentar')}</Button>
+        </form>
+      )}
+    </TarjetaPublicacion>
+  )
+}
+
+/* Publicar o editar: la columna (si hay), la foto y el texto. Basta con la
+   foto o con el texto. La foto se achica aquí antes de subirla (foto.js). */
+function FormPublicacion({ actividad, inicial, fotoInicial, onPublicar, onCancelar }) {
+  const t = useT()
+  const columnas = columnasDe(actividad)
+  const [texto, setTexto] = useState(inicial?.texto || '')
+  const [columna, setColumna] = useState(Number.isInteger(inicial?.columna) && inicial.columna < columnas.length ? inicial.columna : null)
+  /* 'igual' = la que ya estaba; null = sin foto; { grande, chica } = nueva. */
+  const [foto, setFoto] = useState(inicial?.foto ? 'igual' : null)
+  const [estado, setEstado] = useState(null) // null | 'achicando' | 'error' | 'enviando' | 'errorEnvio'
+  const entrada = useRef(null)
+  const limpio = limpiarAbierta(texto)
+  const vista = foto === 'igual' ? fotoInicial : foto?.chica
+  const ocupado = estado === 'achicando' || estado === 'enviando'
+  const listo = Boolean(limpio || foto) && (!columnas.length || columna !== null) && !ocupado
+
+  const elegir = async (e) => {
+    const archivo = e.target.files?.[0]
+    e.target.value = ''
+    if (!archivo) return
+    setEstado('achicando')
+    try {
+      const { prepararFoto } = await import('../live/foto.js')
+      setFoto(await prepararFoto(archivo))
+      setEstado(null)
+    } catch (err) {
+      console.error(err)
+      setEstado('error')
+    }
+  }
+  const enviar = async (e) => {
+    e.preventDefault()
+    if (!listo) return
+    setEstado('enviando')
+    try { await onPublicar({ texto: limpio, columna, foto }); setEstado(null) } catch (err) { console.error(err); setEstado('errorEnvio') }
+  }
+
+  return (
+    <form className="flex flex-col gap-3" onSubmit={enviar}>
+      {columnas.length > 0 && (
+        <fieldset>
+          <legend className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t('enQueColumna')}</legend>
+          <div className="flex flex-wrap gap-2">
+            {columnas.map((c, i) => (
+              <button key={i} type="button" onClick={() => setColumna(i)} aria-pressed={columna === i}
+                className={`rounded-xl border-2 px-3 py-2 font-bold ${columna === i ? 'text-white' : 'bg-white text-slate-800 border-slate-200'}`}
+                style={columna === i ? { background: colorColumna(i), borderColor: colorColumna(i) } : undefined}>
+                {c}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+      )}
+      {actividad.foto && (
+        <div className="flex flex-col gap-2">
+          <input ref={entrada} type="file" accept="image/*" onChange={elegir} className="hidden" />
+          {foto ? (
+            <div>
+              {vista ? <img src={vista} alt={t('tuFoto')} className="w-full rounded-2xl border border-slate-200 bg-slate-100" />
+                : <div className="w-full aspect-[4/3] rounded-2xl bg-slate-100 animate-pulse" />}
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <Button type="button" variant="ghost" disabled={ocupado} onClick={() => entrada.current?.click()}>{estado === 'achicando' ? t('preparandoFoto') : t('cambiarFoto')}</Button>
+                <Button type="button" variant="ghost" disabled={ocupado} onClick={() => setFoto(null)}>{t('quitarFoto')}</Button>
+              </div>
+            </div>
+          ) : (
+            <button type="button" onClick={() => entrada.current?.click()} disabled={estado === 'achicando'}
+              className="rounded-2xl border-2 border-dashed border-slate-300 bg-white p-6 text-lg font-bold text-slate-700 active:scale-[.98] transition">
+              {estado === 'achicando' ? t('preparandoFoto') : `📷 ${t('agregarFoto')}`}
+            </button>
+          )}
+          {estado === 'error' && <p role="alert" className="text-sm text-rose-700">{t('fotoError')}</p>}
+        </div>
+      )}
+      <textarea value={texto} maxLength={LIMITES.abierta} rows={3} aria-label={t('tuRespuesta')}
+        placeholder={actividad.foto ? t('escribeSobreTuFoto') : t('escribeRespuesta')}
+        onChange={(e) => setTexto(e.target.value)}
+        className="rounded-xl border-2 border-slate-200 px-4 py-3 text-lg focus:border-teal-600 outline-none resize-none" />
+      <p className="-mt-2 text-right text-xs text-slate-400 tabular-nums">{texto.length}/{LIMITES.abierta}</p>
+      {estado === 'errorEnvio' && <p role="alert" className="text-sm text-rose-700">{t('publicarError')}</p>}
+      <Button disabled={!listo} className="text-lg">{estado === 'enviando' ? t('publicando') : t('publicar')}</Button>
+      {onCancelar && <Button type="button" variant="ghost" onClick={onCancelar}>{t('cancelar')}</Button>}
+    </form>
   )
 }

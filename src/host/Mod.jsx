@@ -20,6 +20,8 @@ import { Moderacion } from '../live/Moderacion.jsx'
 import { destapables } from '../live/sopa.js'
 import { Apuesta, Crucigrama, Encuesta, Sopa, Escala, Nube, Ranking, Semaforo, TextoConHuecos } from '../live/Resultados.jsx'
 import { FasesApuesta } from './Host.jsx'
+import { SelectorVista } from '../live/Tablero.jsx'
+import { esTablero, vistaDe } from '../live/tablero.js'
 import { useTema } from '../tema.jsx'
 
 export default function Mod({ pin, clave }) {
@@ -89,6 +91,10 @@ function EnVivo({ store, base, idx, actividades, actividad, enSala, estado, part
   const aid = actividad.id
   const respuestas = useValue(store, `${base}/respuestas/${aid}`)
   const moderacion = useValue(store, `${base}/moderacion/${aid}`)
+  /* Como tablero: las fotos chicas (no las del proyector) y los comentarios. */
+  const tablero = esTablero(actividad)
+  const minis = useValue(store, tablero && actividad.foto ? `${base}/minis/${aid}` : null)
+  const comentarios = useValue(store, tablero && actividad.comentarios ? `${base}/comentarios/${aid}` : null)
   const n = cuantosRespondieron(respuestas)
 
   return (
@@ -126,12 +132,20 @@ function EnVivo({ store, base, idx, actividades, actividad, enSala, estado, part
             {estado.moderando ? `● ${t('moderacionEnProyector')}` : t('mostrarModeracion')}
           </Button>
         )}
+        {tablero && (
+          <div className="col-span-2 flex flex-col gap-1">
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{t('ordenarComo')}</p>
+            <SelectorVista actividad={actividad} vista={vistaDe(actividad, moderacion)} onCambiar={(v) => acciones.vista(aid, v)} className="self-start flex-wrap" />
+          </div>
+        )}
       </section>
 
       {moderable(actividad.tipo) ? (
         <section>
           <h2 className="font-black text-slate-900 mb-2">{t('moderar')}</h2>
           <Moderacion actividad={actividad} respuestas={respuestas} moderacion={moderacion} participantes={participantes} conNombres
+            fotos={minis} comentarios={comentarios}
+            onComentario={(c, texto) => acciones.comentar(aid, c.cid, { de: c.de, en: c.en, texto })}
             onPalabra={(clave, d) => acciones.moderarPalabra(aid, clave, d)}
             onAbierta={(pid, d) => acciones.decidirAbierta(aid, pid, d)}
             onAprobarVarias={(pids) => acciones.aprobarVarias(aid, pids)}

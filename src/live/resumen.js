@@ -24,6 +24,7 @@ import { claveDe, palabrasDe, progreso } from './crucigrama.js'
 import { claveSopa, palabrasSopa } from './sopa.js'
 import { comoLista } from './sala.js'
 import { fondoPizarraValido } from './pizarra.js'
+import { columnaDe, columnasDe, comentariosPorPublicacion, esTablero } from './tablero.js'
 import { limpiarObjetivo, limpiarTitulo } from './materiales.js'
 
 export const DIAS = 15
@@ -33,8 +34,9 @@ export const rutaResumen = (id) => `resumenes/${id}`
 export const idResumenNuevo = (azar = Math.random) => idAlAzar(azar)
 export const urlResumen = (id) => `${location.origin}${location.pathname}#/clase?id=${id}`
 
-/** Una actividad, ya resuelta: solo lo que se proyectó, sin quién respondió. */
-export const resultadoDe = (a, respuestas, moderacion) => {
+/** Una actividad, ya resuelta: solo lo que se proyectó, sin quién respondió.
+    `extra` = { minis, comentarios, participantes } de la abierta como tablero. */
+export const resultadoDe = (a, respuestas, moderacion, extra = {}) => {
   const base = { tipo: a.tipo, pregunta: a.pregunta }
   switch (a.tipo) {
     case 'nube':
@@ -53,6 +55,7 @@ export const resultadoDe = (a, respuestas, moderacion) => {
       return { ...base, alternativas, total, filas: filas.map(f => ({ i: f.i, puesto: f.puesto, promedio: f.promedio, puntos: f.puntos })) }
     }
     case 'abierta':
+      if (esTablero(a)) return tableroDe(a, respuestas, moderacion, extra)
       return { ...base, textos: abiertas(respuestas, moderacion?.abiertas, {}, moderacion?.correcciones).aprobadas.map(r => r.texto) }
     case 'preguntas':
       return { ...base, preguntas: preguntasDelCurso(respuestas, moderacion).aprobadas.map(q => ({ texto: q.texto, votos: q.votos, respondida: q.respondida })) }
@@ -92,6 +95,24 @@ export const resultadoDe = (a, respuestas, moderacion) => {
   }
 }
 
+/* LA ABIERTA COMO TABLERO: cada publicación con su foto chica (la de los
+   celulares: alcanza para el PDF y no infla el resumen) y sus comentarios.
+   Los nombres van solo si la actividad los mostraba en el proyector. */
+const tableroDe = (a, respuestas, moderacion, { minis, comentarios, participantes } = {}) => {
+  const nombres = a.nombres === true
+  const columnas = columnasDe(a)
+  const porPublicacion = comentariosPorPublicacion(comentarios, participantes)
+  const publicaciones = abiertas(respuestas, moderacion?.abiertas, participantes, moderacion?.correcciones, a.sinModerar === true).aprobadas
+    .map(r => ({
+      texto: r.texto,
+      ...(nombres && r.nombre ? { nombre: r.nombre } : {}),
+      ...(columnas.length ? { columna: columnaDe(r, columnas.length) } : {}),
+      ...(r.foto && typeof minis?.[r.pid] === 'string' ? { foto: minis[r.pid] } : {}),
+      comentarios: (porPublicacion[r.pid] || []).map(c => ({ texto: c.texto, ...(nombres && c.nombre ? { nombre: c.nombre } : {}) })),
+    }))
+  return { tipo: a.tipo, pregunta: a.pregunta, publicaciones, ...(columnas.length ? { columnas } : {}), ...(nombres ? { nombres: true } : {}) }
+}
+
 const aprobadas = (respuestas, moderacion) => abiertas(respuestas, moderacion?.abiertas, {}, moderacion?.correcciones).aprobadas
 
 /** Una página de la pizarra vale la pena si tiene algo escrito. */
@@ -112,7 +133,9 @@ const paginasConAlgo = (pizarra) => {
  */
 export const armarResumen = (sala, ahora) => {
   const actividades = comoLista(sala?.actividades)
-    .map(a => resultadoDe(a, sala?.respuestas?.[a.id], sala?.moderacion?.[a.id]))
+    .map(a => resultadoDe(a, sala?.respuestas?.[a.id], sala?.moderacion?.[a.id], {
+      minis: sala?.minis?.[a.id], comentarios: sala?.comentarios?.[a.id], participantes: sala?.participantes,
+    }))
     .filter(r => r && tieneAlgo(r))
   const titulo = limpiarTitulo(sala?.clase?.titulo)
   const objetivo = limpiarObjetivo(sala?.clase?.objetivo)
@@ -132,7 +155,7 @@ export const tieneAlgo = (r) => {
     case 'nube': return r.palabras.length > 0
     case 'encuesta': case 'escala': return r.votos.some(v => v > 0)
     case 'ranking': return r.total > 0
-    case 'abierta': return r.textos.length > 0
+    case 'abierta': return (r.textos || r.publicaciones || []).length > 0
     case 'preguntas': return r.preguntas.length > 0
     case 'semaforo': return r.votos.some(v => v > 0)
     case 'duda': case 'muro': return r.textos.length > 0

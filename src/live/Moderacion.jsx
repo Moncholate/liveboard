@@ -20,6 +20,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { LIMITES, abiertas, borradorVigente, conTexto, nube, preguntasDelCurso, seVenCorrecciones } from './logic.js'
 import { Cambios } from './Cambios.jsx'
+import { colorColumna } from './Tablero.jsx'
+import { columnaDe, columnasDe, comentariosPorPublicacion } from './tablero.js'
 import { useT } from '../i18n.jsx'
 
 const chico = 'rounded-lg px-3 py-1 text-sm font-bold'
@@ -45,7 +47,7 @@ const Titulo = ({ children, estado = null, className = 'mb-1.5' }) => (
 )
 
 export function Moderacion({
-  actividad, respuestas, moderacion, participantes, conNombres = false,
+  actividad, respuestas, moderacion, participantes, conNombres = false, fotos = null, comentarios = null, onComentario = null,
   onPalabra, onAbierta, onAprobarVarias, onCorregir, onPregunta, onRespondida, onCorregirPregunta, onCorregirPalabra, onVerCorrecciones,
   onBorrador,
 }) {
@@ -91,22 +93,37 @@ export function Moderacion({
 
   /* Las abiertas y los cierres con texto (la duda, el muro, antes / ahora). */
   if (conTexto(actividad.tipo)) {
-    const { pendientes, aprobadas, descartadas } = abiertas(respuestas, moderacion?.abiertas, participantes, moderacion?.correcciones)
+    const { pendientes, aprobadas, descartadas } = abiertas(respuestas, moderacion?.abiertas, participantes, moderacion?.correcciones, actividad.sinModerar === true)
+    /* Como tablero (tablero.js): la foto chica y la columna arriba del texto,
+       y los nombres también en el PC si la actividad los muestra igual. */
+    const columnas = columnasDe(actividad)
+    const verNombres = conNombres || actividad.nombres === true
     /* «Aprobar todas» se salta las que el filtro marcó: esas se miran una por una. */
     const limpias = pendientes.filter(r => !r.groseria)
     /* Una función y no un componente: definido aquí adentro, React lo trataría
        como uno nuevo en cada respuesta que llega y vaciaría lo que se corrige. */
     const fila = (r, acciones, estado) => (
       <FilaEditable key={r.pid} estado={estado} enVivo={vivo(`a:${r.pid}`)} onBorrador={manda(`a:${r.pid}`)} texto={r.texto} original={r.original} corregida={r.corregida} groseria={r.groseria}
-        encabezado={(r.antes || r.ahora) && (
+        encabezado={(r.antes || r.ahora) ? (
           <p className="text-sm mb-0.5">
             {r.antes && <span className="text-slate-500 line-through">{r.antes}</span>}
             {r.antes && r.ahora && <span className="text-slate-400"> → </span>}
             {r.ahora && <span className="text-slate-800">{r.ahora}</span>}
           </p>
+        ) : (r.foto || columnas.length > 0) && (
+          <div className="flex items-start gap-2 mb-1">
+            {r.foto && (fotos?.[r.pid]
+              ? <img src={fotos[r.pid]} alt="" className="w-20 h-16 rounded-md object-cover bg-slate-100 shrink-0" />
+              : <span aria-hidden="true" className="w-20 h-16 rounded-md bg-slate-100 shrink-0" />)}
+            {columnas.length > 0 && (
+              <span className="text-xs font-bold uppercase tracking-wider" style={{ color: colorColumna(columnaDe(r, columnas.length)) }}>
+                {columnas[columnaDe(r, columnas.length)]}
+              </span>
+            )}
+          </div>
         )}
         onCorregir={onCorregir && ((txt) => onCorregir(r.pid, txt, r.original))}
-        pie={conNombres && <span className="text-xs text-slate-500 truncate">{r.nombre}</span>}
+        pie={verNombres && <span className="text-xs text-slate-500 truncate">{r.nombre}</span>}
         acciones={acciones} />
     )
     return (
@@ -148,11 +165,42 @@ export function Moderacion({
             </ul>
           </details>
         )}
+        {actividad.comentarios === true && (
+          <ModerarComentarios comentarios={comentarios} participantes={participantes} publicaciones={[...pendientes, ...aprobadas, ...descartadas]}
+            verNombres={verNombres} onComentario={onComentario} />
+        )}
       </div>
     )
   }
 
   return <p className="text-sm text-slate-500">{t('sinModeracion')}</p>
+}
+
+/* LOS COMENTARIOS DEL TABLERO: se publican al instante (no hay quien revise
+   treinta comentarios en vivo); el docente los edita o los borra. Lo que el
+   filtro marca no se ve en ningún lado y aparece aquí en rojo. Editar
+   reescribe el comentario: no queda la versión del estudiante. */
+function ModerarComentarios({ comentarios, participantes, publicaciones, verNombres, onComentario }) {
+  const t = useT()
+  const porPublicacion = comentariosPorPublicacion(comentarios, participantes, { conGroserias: true })
+  const lista = Object.values(porPublicacion).flat().sort((a, b) => a.at - b.at)
+  const textoDe = (pid) => publicaciones.find(r => r.pid === pid)?.texto
+  return (
+    <section>
+      <Titulo>{t('comentarios')} · {lista.length}</Titulo>
+      {lista.length ? (
+        <ul className="flex flex-col gap-1.5">
+          {lista.map(c => (
+            <FilaEditable key={c.cid} unaLinea max={LIMITES.abierta} texto={c.texto} groseria={c.groseria}
+              encabezado={<p className="text-xs text-slate-500 truncate mb-0.5">↳ {textoDe(c.en) || t('unaFoto')}</p>}
+              onCorregir={onComentario && ((txt) => txt.trim() && onComentario(c, txt))}
+              pie={verNombres && <span className="text-xs text-slate-500 truncate">{c.nombre}</span>}
+              acciones={onComentario && boton(t('borrar'), 'border border-slate-300 text-slate-700', () => onComentario(c, ''))} />
+          ))}
+        </ul>
+      ) : <p className="text-sm text-slate-500">{t('sinComentarios')}</p>}
+    </section>
+  )
 }
 
 /* El interruptor de cada actividad: ¿el curso ve qué se corrigió, o solo la

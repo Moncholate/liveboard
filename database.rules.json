@@ -43,6 +43,30 @@
             }
           }
         },
+        "fotos": {
+          "$aid": {
+            "$pid": {
+              ".write": true,
+              ".validate": "newData.isString() && newData.val().beginsWith('data:image/jpeg;base64,') && newData.val().length <= 200000"
+            }
+          }
+        },
+        "minis": {
+          "$aid": {
+            "$pid": {
+              ".write": true,
+              ".validate": "newData.isString() && newData.val().beginsWith('data:image/jpeg;base64,') && newData.val().length <= 60000"
+            }
+          }
+        },
+        "comentarios": {
+          "$aid": {
+            "$cid": {
+              ".write": true,
+              ".validate": "newData.child('at').val() === now && newData.child('de').isString() && newData.child('en').isString() && newData.child('texto').isString() && newData.child('texto').val().length >= 1 && newData.child('texto').val().length <= 140"
+            }
+          }
+        },
         "moderacion": {
           ".write": true
         },

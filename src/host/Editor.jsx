@@ -5,6 +5,7 @@
    `onMostrar`, si viene, agrega a cada tarjeta el botón para lanzarla: en Mis
    materiales no hay sala, así que no lo lleva.
    ========================================================================== */
+import { useState } from 'react'
 import { useT } from '../i18n.jsx'
 import {
   ALTERNATIVAS, BASICOS, CIERRES, LIMITES, actividadNueva, conAlternativas, preguntaOpcional, problemaDe, rangoAlternativas,
@@ -12,6 +13,7 @@ import {
 import { Button } from '../ui.jsx'
 import { MODOS } from '../live/crucigrama.js'
 import { destapables } from '../live/sopa.js'
+import { LIMITES_TABLERO, OPCIONES } from '../live/tablero.js'
 
 export function Editor({ lista, setLista, onMostrar }) {
   const t = useT()
@@ -79,6 +81,7 @@ function Tarjeta({ a, i, total, onCambiar, onQuitar, onMover, onMostrar }) {
           onChange={(e) => onCambiar({ pregunta: e.target.value })} className={`${campo} font-semibold`} />
       )}
       {conAlternativas(a.tipo) && <Alternativas a={a} campo={campo} onCambiar={onCambiar} />}
+      {a.tipo === 'abierta' && <OpcionesTablero a={a} campo={campo} onCambiar={onCambiar} />}
       {a.tipo === 'antesahora' && (
         <>
           <div className="grid sm:grid-cols-2 gap-2">
@@ -156,5 +159,43 @@ function Alternativas({ a, campo, onCambiar }) {
         </button>
       )}
     </div>
+  )
+}
+
+/* LA ABIERTA COMO TABLERO (tablero.js): lo que se hacía en Padlet. Todo
+   apagado, es la abierta de siempre. Las columnas se escriben una por línea,
+   como las consignas, y se limpian al guardar; con una sola no hay columnas. */
+function OpcionesTablero({ a, campo, onCambiar }) {
+  const t = useT()
+  const columnas = Array.isArray(a.columnas) ? a.columnas : Object.values(a.columnas || {})
+  const [verColumnas, setVerColumnas] = useState(columnas.length > 0)
+  return (
+    <details className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2" open={OPCIONES.some(k => a[k]) || columnas.length > 0 || undefined}>
+      <summary className="cursor-pointer text-sm font-bold text-slate-700">{t('comoTablero')}</summary>
+      <p className="mt-1 text-xs text-slate-500">{t('comoTableroAyuda')}</p>
+      <div className="mt-2 grid sm:grid-cols-2 gap-x-4 gap-y-1.5">
+        {OPCIONES.map(k => (
+          <label key={k} className="flex items-start gap-2 text-sm cursor-pointer">
+            <input type="checkbox" checked={a[k] === true} onChange={(e) => onCambiar({ [k]: e.target.checked || undefined })} className="mt-0.5 w-4 h-4 accent-teal-700" />
+            <span>
+              <span className="font-semibold text-slate-800">{t(`opcion_${k}`)}</span>
+              <span className="block text-xs text-slate-500">{t(`opcionAyuda_${k}`)}</span>
+            </span>
+          </label>
+        ))}
+        <label className="flex items-start gap-2 text-sm cursor-pointer">
+          <input type="checkbox" checked={verColumnas} onChange={(e) => { setVerColumnas(e.target.checked); if (!e.target.checked) onCambiar({ columnas: undefined }) }} className="mt-0.5 w-4 h-4 accent-teal-700" />
+          <span>
+            <span className="font-semibold text-slate-800">{t('opcion_columnas')}</span>
+            <span className="block text-xs text-slate-500">{t('opcionAyuda_columnas')}</span>
+          </span>
+        </label>
+      </div>
+      {verColumnas && (
+        <textarea value={columnas.join('\n')} rows={3} placeholder={t('columnasEj')} aria-label={t('opcion_columnas')}
+          onChange={(e) => onCambiar({ columnas: e.target.value.split('\n').slice(0, LIMITES_TABLERO.maxColumnas).map(c => c.slice(0, LIMITES_TABLERO.columna)) })}
+          className={`${campo} mt-2 resize-y`} />
+      )}
+    </details>
   )
 }

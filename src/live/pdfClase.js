@@ -91,15 +91,17 @@ export async function descargarPdf(resumen) {
 
   /* Portada: el título de la unidad y el objetivo, si los hay, y siempre la
      fecha y que no lleva nombres. */
+  /* «Sin nombres», salvo que algún tablero los mostrara (tablero.js). */
+  const subtitulo = resumen.actividades.some(a => a.nombres) ? t('pdfConNombres') : t('pdfSubtitulo')
   const fecha = new Date(resumen.creado).toLocaleDateString(resumen.idioma === 'en' ? 'en-US' : 'es-CL', { day: 'numeric', month: 'long', year: 'numeric' })
   if (resumen.titulo) {
     parrafo(resumen.titulo, { size: 20, bold: true, gap: 1.5 })
     if (resumen.objetivo) parrafo(`${t('objetivo')}: ${resumen.objetivo}`, { size: 11, gap: 1.5 })
-    parrafo(`${t('claseDel', fecha)} · ${t('pdfSubtitulo')}`, { size: 10, color: GRIS, gap: 6 })
+    parrafo(`${t('claseDel', fecha)} · ${subtitulo}`, { size: 10, color: GRIS, gap: 6 })
   } else {
     parrafo(t('claseDel', fecha), { size: 20, bold: true, gap: 1 })
     if (resumen.objetivo) parrafo(`${t('objetivo')}: ${resumen.objetivo}`, { size: 11, gap: 1.5 })
-    parrafo(t('pdfSubtitulo'), { size: 10, color: GRIS, gap: 6 })
+    parrafo(subtitulo, { size: 10, color: GRIS, gap: 6 })
   }
 
   resumen.actividades.forEach((a, n) => {
@@ -141,6 +143,29 @@ export async function descargarPdf(resumen) {
         barra(maximo ? (f.puntos / maximo) * 100 : 0, TEAL)
       })
       parrafo(t('ordenaron', a.total), { size: 9, color: GRIS })
+    } else if (a.tipo === 'abierta' && a.publicaciones?.length) {
+      /* El tablero: por columna si las había; cada publicación con su foto,
+         su texto, quién la escribió (si se mostraba) y sus comentarios. */
+      const grupos = a.columnas?.length
+        ? a.columnas.map((nombre, i) => ({ nombre, items: a.publicaciones.filter(p => (p.columna || 0) === i) })).filter(g => g.items.length)
+        : [{ nombre: null, items: a.publicaciones }]
+      for (const g of grupos) {
+        if (g.nombre) parrafo(g.nombre.toUpperCase(), { size: 10, bold: true, color: TEAL, gap: 2 })
+        for (const p of g.items) {
+          if (p.foto) {
+            const { width, height } = doc.getImageProperties(p.foto)
+            let w = Math.min(W, 100), h = (w * height) / width
+            if (h > 110) { h = 110; w = (h * width) / height }
+            salto(h + 12)
+            doc.addImage(p.foto, 'JPEG', M, y, w, h, undefined, 'FAST')
+            y += h + 2.5
+          }
+          if (p.texto) parrafo(p.texto, { size: 12, bold: true, gap: p.nombre ? 0.5 : 2 })
+          if (p.nombre) parrafo(p.nombre, { size: 9, color: GRIS, gap: 2 })
+          p.comentarios.forEach(c => vineta(c.nombre ? `${c.nombre}: ${c.texto}` : c.texto))
+          y += 3
+        }
+      }
     } else if (a.tipo === 'abierta') {
       /* La viñeta va dibujada: el «•» no está en la letra básica del PDF. */
       a.textos.forEach(texto => {

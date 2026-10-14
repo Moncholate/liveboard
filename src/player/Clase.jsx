@@ -47,6 +47,8 @@ export const normalizar = (r) => ({
     preguntas: lista(a.preguntas),
     items: lista(a.items),
     consignas: lista(a.consignas),
+    columnas: lista(a.columnas),
+    publicaciones: lista(a.publicaciones).map(p => ({ ...p, comentarios: lista(p.comentarios) })),
   })),
   pizarra: { fondo: r.pizarra?.fondo || 'blanco', paginas: lista(r.pizarra?.paginas) },
 })
@@ -86,7 +88,7 @@ function Vista({ resumen }) {
         <section className="flex flex-col gap-2">
           <h1 className="text-2xl font-black text-slate-900">{resumen.titulo || t('claseDel', fecha)}</h1>
           {resumen.objetivo && <p className="text-slate-700"><b>{t('objetivo')}:</b> {resumen.objetivo}</p>}
-          <p className="text-sm text-slate-500">{resumen.titulo ? `${t('claseDel', fecha)} · ` : ''}{t('pdfSubtitulo')} · {t('disponibleHasta', vence)}</p>
+          <p className="text-sm text-slate-500">{resumen.titulo ? `${t('claseDel', fecha)} · ` : ''}{resumen.actividades.some(a => a.nombres) ? t('pdfConNombres') : t('pdfSubtitulo')} · {t('disponibleHasta', vence)}</p>
           <BotonPdf resumen={resumen} className="text-lg mt-1" />
         </section>
         {resumen.actividades.map((a, n) => <Actividad key={n} a={a} n={n} />)}
@@ -129,6 +131,22 @@ function Actividad({ a, n }) {
     const maximo = a.total * (a.alternativas.length - 1)
     cuerpo = a.filas.map(f => (
       <Fila key={f.i} izq={`${f.puesto}. ${a.alternativas[f.i]}`} der={f.promedio == null ? '' : t('puestoMedio', numero(f.promedio))} pct={maximo ? (f.puntos / maximo) * 100 : 0} />
+    ))
+  } else if (a.tipo === 'abierta' && a.publicaciones.length) {
+    cuerpo = a.publicaciones.map((p, i) => (
+      <article key={i} className="rounded-xl bg-white border border-slate-200 overflow-hidden">
+        {p.foto && <img src={p.foto} alt="" className="w-full bg-slate-100" />}
+        <div className="p-3 flex flex-col gap-1">
+          {a.columnas.length > 0 && <p className="text-xs font-bold uppercase tracking-wider text-teal-800">{a.columnas[p.columna || 0]}</p>}
+          {p.texto && <p className="font-semibold text-slate-800 break-words">{p.texto}</p>}
+          {p.nombre && <p className="text-sm text-slate-500">{p.nombre}</p>}
+          {p.comentarios.length > 0 && (
+            <ul className="mt-1 border-t border-slate-100 pt-2 flex flex-col gap-1">
+              {p.comentarios.map((c, j) => <li key={j} className="text-sm text-slate-800 break-words">{c.nombre && <b className="text-slate-600">{c.nombre}: </b>}{c.texto}</li>)}
+            </ul>
+          )}
+        </div>
+      </article>
     ))
   } else if (a.tipo === 'abierta') {
     cuerpo = a.textos.map((texto, i) => <p key={i} className="rounded-xl bg-white border border-slate-200 p-3 font-semibold text-slate-800 break-words">{texto}</p>)

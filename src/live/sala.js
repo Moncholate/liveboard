@@ -33,7 +33,10 @@
                             correccionesNube: { clave escrita: texto },
                             verCorrecciones: false?,
                             destapadas: { numero+dir: true },   (crucigrama y sopa)
-                            borrador: { clave, texto, at } } }   (corregir en vivo)
+                            borrador: { clave, texto, at },   (corregir en vivo)
+                            vista: 'muro' | 'cuadricula' | 'columnas' | 'lista' } }
+     fotos, minis  { aid: { pid: data URL } }   la abierta como tablero (tablero.js)
+     comentarios   { aid: { cid: { de, en, texto, at } } }
                    (la corrección del docente; `de` = el texto que corrigió,
                    para que caduque sola si el estudiante cambia el suyo.
                    verCorrecciones = false si el curso ve solo la versión
@@ -48,6 +51,7 @@
    ========================================================================== */
 import { claveDePalabra, empiezaOculta, limpiarAbierta, limpiarActividad, limpiarPalabra } from './logic.js'
 import { FASES_APUESTA } from './cierres.js'
+import { VISTAS, limpiarComentario } from './tablero.js'
 import { limpiarObjetivo, limpiarTitulo } from './materiales.js'
 
 export const raiz = (pin) => `boards/${pin}`
@@ -106,6 +110,24 @@ export const accionesDeSala = (store, pin) => {
     verCorrecciones: (aid, si) => store.set(`${base}/moderacion/${aid}/verCorrecciones`, si ? null : false),
     decidirPregunta: (aid, qid, decision) => store.set(`${base}/moderacion/${aid}/preguntas/${qid}`, decision),
     marcarRespondida: (aid, qid, si) => store.set(`${base}/moderacion/${aid}/respondidas/${qid}`, si ? true : null),
+    /* LA ABIERTA COMO TABLERO (tablero.js). La vista la cambian el proyector
+       y el celular del docente; los comentarios, cada estudiante los suyos y
+       el docente cualquiera. Editar un comentario lo reescribe entero: las
+       reglas piden la hora del servidor en cada escritura. Sin texto, se borra. */
+    vista: (aid, v) => store.set(`${base}/moderacion/${aid}/vista`, VISTAS.includes(v) ? v : null),
+    comentar: (aid, cid, { de, en, texto }) => {
+      const limpio = limpiarComentario(texto)
+      return limpio
+        ? store.set(`${base}/comentarios/${aid}/${cid}`, { de, en, texto: limpio, at: store.stamp() })
+        : store.remove(`${base}/comentarios/${aid}/${cid}`)
+    },
+    /* La publicación con su foto. Los comentarios que tenía quedan sin dónde
+       mostrarse y no se ven (se agrupan por publicación). */
+    borrarPublicacion: (aid, pid) => Promise.all([
+      store.remove(`${base}/respuestas/${aid}/${pid}`),
+      store.remove(`${base}/fotos/${aid}/${pid}`),
+      store.remove(`${base}/minis/${aid}/${pid}`),
+    ]),
     cerrarSala: () => store.remove(base),
   }
 }
