@@ -21,7 +21,7 @@ import { QrAmpliable } from '../live/QrAmpliable.jsx'
 import { useStore, useUser, useValue } from '../net/hooks.js'
 import { isOnline } from '../net/store.js'
 import { Button, Center, Logo, urlParaUnirse } from '../ui.jsx'
-import { ProveedorIdioma, SelectorIdioma, idiomaDelNavegador, traducir, useT, valido } from '../i18n.jsx'
+import { IDIOMA_KEY, ProveedorIdioma, SelectorIdioma, guardado, idiomaDelNavegador, traducir, useT, valido } from '../i18n.jsx'
 import {
   abiertas, conTexto, consignasDe, cuantosRespondieron, idAlAzar, moderable as esModerable, pinAlAzar, preguntasDelCurso, problemaDe,
   seVenCorrecciones, tituloDe,
@@ -60,7 +60,6 @@ const CLASE_KEY = 'liveboard-clase'
 const ultimaClase = () => {
   try { return JSON.parse(guardado.get(CLASE_KEY)) || null } catch { return null }
 }
-export const IDIOMA_KEY = 'liveboard-idioma'
 /* El fondo del proyector: es de este computador, no de la sala, porque solo
    lo ve el proyector (los celulares no lo usan). Un material lo trae consigo. */
 const FONDO_KEY = 'liveboard-fondo'
@@ -68,11 +67,6 @@ const FONDO_KEY = 'liveboard-fondo'
 const TEMA_PROYECTOR_KEY = 'liveboard-tema-proyector'
 /* Qué material se cargó en esta sala, para ofrecer «Guardar cambios en…». */
 const ORIGEN_KEY = 'liveboard-origen'
-
-export const guardado = {
-  get: (k) => { try { return localStorage.getItem(k) } catch { return null } },
-  set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v) } catch { /* modo privado */ } },
-}
 
 const ultimas = () => {
   try { return JSON.parse(guardado.get(ULTIMAS_KEY)) || [] } catch { return [] }
@@ -229,7 +223,8 @@ function Encabezado({ store, user, pin, meta, online, tema, onCerrar, acciones, 
       <Logo className="text-2xl" />
       {!isOnline && <span className="text-xs font-bold text-amber-800 bg-amber-100 rounded-full px-2.5 py-1">{t('modoLocal')}</span>}
       <span className="flex-1" />
-      <span className="text-slate-600">{t('conectados', conectados(online))}</span>
+      {/* En la sala de espera los conectados se ven grandes junto al PIN: arriba, solo al presentar. */}
+      {presentando && <span className="text-slate-600">{t('conectados', conectados(online))}</span>}
       <span className="text-slate-500">{t('pin')} <b className="text-slate-900 tracking-widest">{pin}</b></span>
       <BotonTema tema={tema} etiqueta={tema.oscuro ? t('usarClaro') : t('usarOscuro')} />
       {/* CADA ACCIÓN UNA SOLA VEZ POR PANTALLA (9-oct-2026): el botón de la
@@ -336,6 +331,8 @@ function Preparar({ store, user, pin, clave, online, actividades, acciones, clas
           <h2 className="text-xl font-black text-slate-900">{t('actividades')}</h2>
           <Button disabled={primeraLista < 0} onClick={() => lanzar(primeraLista)}>{t('empezar')}</Button>
         </div>
+        {/* Sin esto, «Empezar» se veía gris sin decir por qué. */}
+        {primeraLista < 0 && <p className="-mt-2 text-right text-sm text-slate-500">{t(lista.length ? 'empezarFalta' : 'empezarAgrega')}</p>}
         <div className="rounded-2xl bg-white border border-slate-200 p-4 flex flex-col gap-2">
           <p className="font-bold text-slate-800">{t('estaClase')}</p>
           <input value={titulo} maxLength={LARGO_TITULO} placeholder={t('nombreMaterialEj')} aria-label={t('nombreMaterial')}

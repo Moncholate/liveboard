@@ -10,6 +10,7 @@ import { casillasDe, claveDe, palabrasDe, progreso, rejilla, umbral } from './cr
 import { capsula, claveSopa, filasDe, palabrasSopa } from './sopa.js'
 import { useT } from '../i18n.jsx'
 import { Cambios } from './Cambios.jsx'
+import { Icon } from '../icons.jsx'
 
 /* Colores de la nube: los de las alternativas, en tonos que se leen sobre
    blanco. Se asignan por la clave, no por la posición, para que una palabra no
@@ -121,10 +122,10 @@ export function Abiertas({ aprobadas, chico = false, sobreFondo = false, verCamb
           {vivo(r) !== null
             ? (verCambios ? <Cambios antes={r.original} despues={vivo(r)} /> : vivo(r))
             : r.corregida && verCambios ? <Cambios antes={r.original} despues={r.texto} /> : r.texto}
-          {vivo(r) !== null && <span className={`block font-bold text-teal-800 animate-pulse ${chico ? 'text-xs' : 'text-base mt-1'}`}>✎ {t('corrigiendo')}</span>}
+          {vivo(r) !== null && <span className={`block font-bold text-teal-800 animate-pulse ${chico ? 'text-xs' : 'text-base mt-1'}`}><Icon name="pencil" className="mr-1" />{t('corrigiendo')}</span>}
           {r.corregida && !verCambios && (
             <span title={t('corregida')} aria-label={t('corregida')}
-              className={`absolute text-slate-400 font-normal ${chico ? 'top-1 right-1.5 text-xs' : 'top-2 right-3 text-base'}`}>✎</span>
+              className={`absolute text-slate-400 font-normal ${chico ? 'top-1 right-1.5 text-xs' : 'top-2 right-3 text-base'}`}><Icon name="pencil" /></span>
           )}
         </div>
       ))}
@@ -183,12 +184,12 @@ export function Preguntas({ aprobadas, chico = false, sobreFondo = false, verCam
           {vivo(q) !== null
             ? <p className={`flex-1 min-w-0 break-words font-semibold text-slate-800 ${chico ? 'text-sm' : 'text-2xl'}`}>
                 {verCambios ? <Cambios antes={q.original} despues={vivo(q)} /> : vivo(q)}
-                <span className={`block font-bold text-teal-800 animate-pulse ${chico ? 'text-xs' : 'text-base'}`}>✎ {t('corrigiendo')}</span>
+                <span className={`block font-bold text-teal-800 animate-pulse ${chico ? 'text-xs' : 'text-base'}`}><Icon name="pencil" className="mr-1" />{t('corrigiendo')}</span>
               </p>
             : q.corregida && verCambios
             ? <Cambios antes={q.original} despues={q.texto} className={`flex-1 min-w-0 font-semibold ${q.respondida ? 'text-slate-500' : 'text-slate-800'} ${chico ? 'text-sm' : 'text-2xl'}`} />
             : <p className={`flex-1 min-w-0 break-words font-semibold ${q.respondida ? 'text-slate-500' : 'text-slate-800'} ${chico ? 'text-sm' : 'text-2xl'}`}>{q.texto}</p>}
-          {q.respondida && <span className={`shrink-0 font-bold text-slate-500 ${chico ? 'text-xs' : 'text-base'}`}>✓ {t('respondida')}</span>}
+          {q.respondida && <span className={`shrink-0 font-bold text-slate-500 ${chico ? 'text-xs' : 'text-base'}`}><Icon name="check" className="mr-1" />{t('respondida')}</span>}
         </div>
       ))}
     </div>

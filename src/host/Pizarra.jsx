@@ -26,6 +26,7 @@ import {
 } from '../live/pizarra.js'
 import { Lienzo } from '../live/Lienzo.jsx'
 import { useTema } from '../tema.jsx'
+import { Icon } from '../icons.jsx'
 
 const CADA_MS = 80
 
@@ -287,7 +288,7 @@ function Tablero({ store, pin, clave }) {
           </button>
         ))}
         <button onClick={() => setBorrador(b => !b)} aria-pressed={borrador} className={`${boton} ${borrador ? activo : ''}`}>{t('borrador')}</button>
-        <button onClick={deshacer} disabled={!trazos.length} className={boton}>↶ {t('deshacer')}</button>
+        <button onClick={deshacer} disabled={!trazos.length} className={boton}><Icon name="undo" className="mr-1.5" />{t('deshacer')}</button>
         <button onClick={limpiar} disabled={!trazos.length} className={boton}>{t('limpiar')}</button>
         <span className="w-px h-8 bg-slate-200" />
         <select value={vista.fondo} onChange={(e) => cambiarVista({ fondo: e.target.value })} aria-label={t('papel')}
@@ -315,7 +316,7 @@ function Tablero({ store, pin, clave }) {
         <a href={`#/mod?pin=${pin}&clave=${clave}`} onPointerDown={(e) => e.stopPropagation()}
           className="absolute bottom-3 left-5 h-11 px-3 rounded-xl border font-bold shadow grid place-items-center"
           style={{ backgroundColor: 'rgba(255, 255, 255, 0.92)', color: '#334155', borderColor: '#cbd5e1' }}>
-          ✎ {t('moderar')}
+          <span><Icon name="pencil" className="mr-1.5" />{t('moderar')}</span>
         </a>
         {/* Flota sobre el papel y no en la barra: si la barra cambia de largo
             se parte en dos líneas y el papel se achica a mitad de clase. */}

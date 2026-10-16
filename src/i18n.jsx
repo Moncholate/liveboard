@@ -24,7 +24,7 @@ export const TEXTOS = {
   soyProfe: { es: 'Soy profesor/a · abrir una sala', en: 'I’m a teacher · open a room' },
   misMateriales: { es: 'Mis materiales', en: 'My materials' },
   cargando: { es: 'Cargando…', en: 'Loading…' },
-  conectados: { es: (n) => `${n} conectados`, en: (n) => `${n} connected` },
+  conectados: { es: (n) => `${n} ${n === 1 ? 'conectado' : 'conectados'}`, en: (n) => `${n} connected` },
   modoLocal: { es: 'Modo local · solo este navegador', en: 'Local mode · this browser only' },
 
   // Tipos de actividad
@@ -94,6 +94,8 @@ export const TEXTOS = {
   confirmarCerrar: { es: '¿Cerrar la sala? Se borran las respuestas y los estudiantes salen. Si quieres que se lleven la clase, usa «Compartir» antes.', en: 'Close the room? All answers are deleted and students leave. If you want them to keep the class, use “Share” first.' },
   actividades: { es: 'Actividades', en: 'Activities' },
   empezar: { es: 'Empezar', en: 'Start' },
+  empezarAgrega: { es: 'Agrega una actividad abajo para empezar.', en: 'Add an activity below to start.' },
+  empezarFalta: { es: 'Completa una actividad para empezar.', en: 'Finish an activity to start.' },
   agregar: { es: 'Agregar', en: 'Add' },
   subir: { es: 'Subir', en: 'Move up' },
   bajar: { es: 'Bajar', en: 'Move down' },
@@ -467,6 +469,15 @@ export const idiomaDelNavegador = () =>
   (typeof navigator !== 'undefined' && /^en\b/i.test(navigator.language || '') ? 'en' : 'es')
 
 export const valido = (l) => (IDIOMAS.includes(l) ? l : 'es')
+
+/* El último idioma que eligió el docente en este computador, y el acceso a
+   localStorage que lo guarda. Viven aquí y no en Host.jsx para que la portada
+   y el celular no carguen el proyector. */
+export const IDIOMA_KEY = 'liveboard-idioma'
+export const guardado = {
+  get: (k) => { try { return localStorage.getItem(k) } catch { return null } },
+  set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v) } catch { /* modo privado */ } },
+}
 
 /** t('conectados', 3) → «3 conectados». Una clave que no existe se ve tal cual,
     para que se note en pantalla y no pase en silencio. */

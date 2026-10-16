@@ -16,6 +16,7 @@ import { rutaResumen } from '../live/resumen.js'
 import { REACCIONES } from '../live/tablero.js'
 import { imagenesDePagina } from '../live/imagenPizarra.js'
 import { useTema } from '../tema.jsx'
+import { Icon } from '../icons.jsx'
 
 export default function Clase({ id }) {
   useTema()
@@ -230,7 +231,7 @@ function Actividad({ a, n }) {
     cuerpo = a.preguntas.map((q, i) => (
       <div key={i} className={`rounded-xl bg-white border border-slate-200 p-3 ${q.respondida ? 'opacity-70' : ''}`}>
         <p className="font-semibold text-slate-800 break-words">{q.texto}</p>
-        <p className="text-xs text-slate-500 mt-1">{t('votosN', q.votos)}{q.respondida ? ` · ✓ ${t('respondida')}` : ''}</p>
+        <p className="text-xs text-slate-500 mt-1">{t('votosN', q.votos)}{q.respondida && <> · <Icon name="check" className="mr-0.5" />{t('respondida')}</>}</p>
       </div>
     ))
   }

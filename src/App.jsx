@@ -1,13 +1,18 @@
-import { useEffect, useState } from 'react'
-import Host, { IDIOMA_KEY, guardado } from './host/Host.jsx'
-import Materiales from './host/Materiales.jsx'
-import Mod from './host/Mod.jsx'
-import Pizarra from './host/Pizarra.jsx'
-import DiagnosticoLapiz from './host/DiagnosticoLapiz.jsx'
-import Clase from './player/Clase.jsx'
-import Player from './player/Player.jsx'
-import { Button, Logo } from './ui.jsx'
-import { ProveedorIdioma, SelectorIdioma, idiomaDelNavegador, useT, valido } from './i18n.jsx'
+import { Suspense, lazy, useEffect, useState } from 'react'
+import { Button, Center, Logo } from './ui.jsx'
+import { IDIOMA_KEY, ProveedorIdioma, SelectorIdioma, guardado, idiomaDelNavegador, useT, valido } from './i18n.jsx'
+
+/* Cada pantalla se baja solo cuando se abre: el celular de cada estudiante no
+   necesita el proyector, la pizarra ni la moderación, y entra más rápido con
+   el wifi del colegio. La de responder se adelanta mientras se escribe el PIN. */
+const Host = lazy(() => import('./host/Host.jsx'))
+const Materiales = lazy(() => import('./host/Materiales.jsx'))
+const Mod = lazy(() => import('./host/Mod.jsx'))
+const Pizarra = lazy(() => import('./host/Pizarra.jsx'))
+const DiagnosticoLapiz = lazy(() => import('./host/DiagnosticoLapiz.jsx'))
+const Clase = lazy(() => import('./player/Clase.jsx'))
+const cargarPlayer = () => import('./player/Player.jsx')
+const Player = lazy(cargarPlayer)
 import { useTema } from './tema.jsx'
 
 /* Ruteo por hash: GitHub Pages solo sirve index.html, así que #/host,
@@ -23,6 +28,10 @@ function useHash() {
 }
 
 export default function App() {
+  return <Suspense fallback={<Center>…</Center>}><Pantalla /></Suspense>
+}
+
+function Pantalla() {
   const hash = useHash()
   const params = new URLSearchParams(hash.split('?')[1] || '')
   if (hash.startsWith('#/host')) return <Host />
@@ -53,6 +62,7 @@ function InicioConIdioma() {
 function Inicio({ onIdioma }) {
   const t = useT()
   const [pin, setPin] = useState('')
+  useEffect(() => { cargarPlayer() }, [])
   return (
     <div className="min-h-screen grid place-items-center p-4">
       <div className="w-full max-w-sm flex flex-col gap-6 text-center">

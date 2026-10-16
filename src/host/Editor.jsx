@@ -7,6 +7,7 @@
    ========================================================================== */
 import { useState } from 'react'
 import { useT } from '../i18n.jsx'
+import { Icon } from '../icons.jsx'
 import {
   ALTERNATIVAS, BASICOS, CIERRES, LIMITES, actividadNueva, conAlternativas, preguntaOpcional, problemaDe, rangoAlternativas,
 } from '../live/logic.js'
@@ -65,8 +66,8 @@ function Tarjeta({ a, i, total, onCambiar, onQuitar, onMover, onMostrar }) {
         <span className="grid place-items-center w-7 h-7 rounded-full bg-slate-100 text-sm font-black text-slate-600">{i + 1}</span>
         <span className="text-sm font-bold text-teal-800">{t(`tipo_${a.tipo}`)}</span>
         <span className="flex-1" />
-        <button onClick={() => onMover(-1)} disabled={i === 0} aria-label={t('subir')} className="px-2 text-slate-500 disabled:opacity-30">↑</button>
-        <button onClick={() => onMover(1)} disabled={i === total - 1} aria-label={t('bajar')} className="px-2 text-slate-500 disabled:opacity-30">↓</button>
+        <button onClick={() => onMover(-1)} disabled={i === 0} aria-label={t('subir')} className="px-2 text-slate-500 disabled:opacity-30"><Icon name="up" /></button>
+        <button onClick={() => onMover(1)} disabled={i === total - 1} aria-label={t('bajar')} className="px-2 text-slate-500 disabled:opacity-30"><Icon name="down" /></button>
         <button onClick={onQuitar} className="px-2 text-sm text-rose-700">{t('quitar')}</button>
       </div>
       {a.tipo === 'duda' || a.tipo === 'muro' ? (
@@ -149,7 +150,7 @@ function Alternativas({ a, campo, onCambiar }) {
             className={campo} />
           {alts.length > min && (
             <button onClick={() => onCambiar({ alternativas: alts.filter((_, k) => k !== j) })}
-              aria-label={ranking ? t('quitarElemento', j + 1) : t('quitarAlternativa', rotulo(j))} className="px-2 text-slate-400 hover:text-rose-700">×</button>
+              aria-label={ranking ? t('quitarElemento', j + 1) : t('quitarAlternativa', rotulo(j))} className="px-2 text-slate-400 hover:text-rose-700"><Icon name="x" /></button>
           )}
         </div>
       ))}

@@ -22,6 +22,7 @@ import { borradorVigente } from './logic.js'
 import { REACCIONES, columnaDe, columnasDe, porColumna, reaccionesDe, vistasDe } from './tablero.js'
 import { Cambios } from './Cambios.jsx'
 import { useT } from '../i18n.jsx'
+import { Icon } from '../icons.jsx'
 
 /* Colores de las columnas: los de las alternativas, que ya pasan contraste
    en los dos temas. Una franja arriba de cada tarjeta, no la tarjeta entera:
@@ -136,19 +137,19 @@ export function TarjetaPublicacion({
                 <TextoPublicado r={r} verCambios={verCambios} vivo={vivo} />
               </p>
             )}
-            {vivo !== null && <span className={`block font-bold text-teal-800 animate-pulse ${chico ? 'text-xs' : 'text-base mt-1'}`}>✎ {t('corrigiendo')}</span>}
+            {vivo !== null && <span className={`block font-bold text-teal-800 animate-pulse ${chico ? 'text-xs' : 'text-base mt-1'}`}><Icon name="pencil" className="mr-1" />{t('corrigiendo')}</span>}
             {nombres && r.nombre && <p className={`font-semibold text-slate-500 ${chico ? 'text-xs mt-0.5' : 'text-base mt-1'}`}>{r.nombre}</p>}
           </div>
         )}
       </div>
       {r.corregida && !verCambios && vivo === null && (
-        <span title={t('corregida')} aria-label={t('corregida')} className="absolute top-2 right-3 text-base text-slate-400">✎</span>
+        <span title={t('corregida')} aria-label={t('corregida')} className="absolute top-2 right-3 text-base text-slate-400"><Icon name="pencil" /></span>
       )}
       {reacciones && (onReaccionar || reacciones.total > 0) && (
         <Reacciones reacciones={reacciones} onReaccionar={onReaccionar} chico={chico} grande={grande} />
       )}
       {verComentarios === 'cuenta' && comentarios.length > 0 && (
-        <p className={`px-4 pb-3 font-bold text-slate-500 tabular-nums ${chico ? 'text-xs' : 'text-base'}`}>💬 {t('comentariosN', comentarios.length)}</p>
+        <p className={`px-4 pb-3 font-bold text-slate-500 tabular-nums ${chico ? 'text-xs' : 'text-base'}`}><Icon name="comment" className="mr-1.5" />{t('comentariosN', comentarios.length)}</p>
       )}
       {verComentarios === 'todos' && comentarios.length > 0 && (
         <ul className={`border-t border-slate-100 flex flex-col ${chico ? 'px-3 py-2 gap-1.5' : grande ? 'px-6 py-3 gap-2' : 'px-4 py-2.5 gap-1.5'}`}>

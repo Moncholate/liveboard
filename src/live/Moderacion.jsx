@@ -23,6 +23,7 @@ import { Cambios } from './Cambios.jsx'
 import { colorColumna } from './Tablero.jsx'
 import { columnaDe, columnasDe, comentariosPorPublicacion } from './tablero.js'
 import { useT } from '../i18n.jsx'
+import { Icon } from '../icons.jsx'
 
 const chico = 'rounded-lg px-3 py-1 text-sm font-bold'
 const boton = (texto, clase, onClick) => (
@@ -192,7 +193,7 @@ function ModerarComentarios({ comentarios, participantes, publicaciones, verNomb
         <ul className="flex flex-col gap-1.5">
           {lista.map(c => (
             <FilaEditable key={c.cid} unaLinea max={LIMITES.abierta} texto={c.texto} groseria={c.groseria}
-              encabezado={<p className="text-xs text-slate-500 truncate mb-0.5">↳ {textoDe(c.en) || t('unaFoto')}</p>}
+              encabezado={<p className="text-xs text-slate-500 truncate mb-0.5"><Icon name="reply" className="mr-1" />{textoDe(c.en) || t('unaFoto')}</p>}
               onCorregir={onComentario && ((txt) => txt.trim() && onComentario(c, txt))}
               pie={verNombres && <span className="text-xs text-slate-500 truncate">{c.nombre}</span>}
               acciones={onComentario && boton(t('borrar'), 'border border-slate-300 text-slate-700', () => onComentario(c, ''))} />
@@ -252,7 +253,7 @@ function ModerarPreguntas({ respuestas, moderacion, onPregunta, onRespondida, on
                 {boton(t('quitar'), 'border border-slate-300 text-slate-700', () => onPregunta(q.qid, false))}
                 {q.respondida
                   ? boton(t('desmarcarRespondida'), 'border border-slate-300 text-slate-700', () => onRespondida(q.qid, false))
-                  : boton(`✓ ${t('marcarRespondida')}`, 'bg-teal-700 text-white', () => onRespondida(q.qid, true))}
+                  : boton(<><Icon name="check" className="mr-1" />{t('marcarRespondida')}</>, 'bg-teal-700 text-white', () => onRespondida(q.qid, true))}
               </>, 'aprobada')
             ))}
           </ul>
@@ -337,14 +338,14 @@ function FilaEditable({ texto, original, corregida, groseria, estado = null, tac
           <div className="mt-1.5 flex flex-wrap items-center gap-2">
             {estado && estado !== 'descartada' && (
               <span className={`text-xs font-bold ${ESTADOS[estado].etiqueta}`}>
-                {estado === 'pendiente' ? t('porRevisar') : `✓ ${t('enPantalla')}`}
+                {estado === 'pendiente' ? t('porRevisar') : <><Icon name="check" className="mr-1" />{t('enPantalla')}</>}
               </span>
             )}
-            {enVivo !== null && <span className="text-xs font-bold text-teal-800 animate-pulse">✎ {t('corrigiendo')}</span>}
+            {enVivo !== null && <span className="text-xs font-bold text-teal-800 animate-pulse"><Icon name="pencil" className="mr-1" />{t('corrigiendo')}</span>}
             {pie}
             {groseria && <span className="text-xs font-bold text-rose-700">{t('filtro')}</span>}
             <span className="flex-1" />
-            {onCorregir && boton(`✎ ${t('corregir')}`, 'border border-slate-300 text-slate-700', abrir)}
+            {onCorregir && boton(<><Icon name="pencil" className="mr-1" />{t('corregir')}</>, 'border border-slate-300 text-slate-700', abrir)}
             {onCorregir && corregida && boton(t('quitarCorreccion'), 'border border-slate-300 text-slate-700', () => onCorregir(''))}
             {acciones}
           </div>

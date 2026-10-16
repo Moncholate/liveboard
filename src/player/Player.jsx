@@ -35,6 +35,7 @@ import {
 } from '../live/tablero.js'
 import { esGroseria } from '../live/groserias.js'
 import { useTema } from '../tema.jsx'
+import { Icon } from '../icons.jsx'
 
 /* sessionStorage y no localStorage: cada pestaña es un estudiante distinto, y
    al recargar se vuelve a la misma sala con el mismo apodo. */
@@ -122,6 +123,7 @@ function EnSala({ store, pin, pid, onFuera }) {
   const actividades = comoLista(useValue(store, `${base}/actividades`))
   const yo = useValue(store, `${base}/participantes/${pid}`)
   const resumenId = useValue(store, `${base}/resumen`)
+  const clase = useValue(store, `${base}/clase`)
 
   useEffect(() => store.presence(`${base}/online/${pid}`), [store, base, pid])
 
@@ -144,16 +146,23 @@ function EnSala({ store, pin, pid, onFuera }) {
           {resumenId && <AvisoClase key={resumenId} store={store} id={resumenId} />}
           {actividad
             ? <Responder key={actividad.id} store={store} pin={pin} base={base} pid={pid} actividad={actividad} abierta={Boolean(estado.abierta)} fase={faseApuesta(estado)} />
-            : <Espera />}
+            : <Espera titulo={clase?.titulo} />}
         </main>
       </div>
     </ProveedorIdioma>
   )
 }
 
-function Espera() {
+/* titulo: el de la clase, si el docente lo escribió; así el estudiante confirma que entró a la sala correcta. */
+function Espera({ titulo }) {
   const t = useT()
-  return <Center><p className="text-2xl font-bold text-slate-800">{t('estasDentro')}</p><p className="mt-2">{t('miraPantalla')}</p></Center>
+  return (
+    <Center>
+      {titulo && <p className="mb-4 text-lg font-bold text-teal-800">{titulo}</p>}
+      <p className="text-2xl font-bold text-slate-800">{t('estasDentro')}</p>
+      <p className="mt-2">{t('miraPantalla')}</p>
+    </Center>
+  )
 }
 
 function Responder({ store, pin, base, pid, actividad, abierta, fase }) {
@@ -238,7 +247,7 @@ function Enviada({ actividad, mia, decision, correccion, abierta, onCambiar }) {
         {corregida
           ? <Cambios antes={limpiarAbierta(mia.texto)} despues={corregida} className="mt-1 text-lg font-semibold text-slate-900" />
           : <div className="mt-1 text-lg font-semibold text-slate-900 break-words">{lo}</div>}
-        {corregida && <p className="mt-2 text-sm font-bold text-teal-800">✎ {t('profeCorrigio')}</p>}
+        {corregida && <p className="mt-2 text-sm font-bold text-teal-800"><Icon name="pencil" className="mr-1" />{t('profeCorrigio')}</p>}
         {moderada && (
           <p className="mt-2 text-sm text-slate-500">{decision === true ? t('enPantallaSinNombre') : t('profeRevisa')}</p>
         )}
@@ -549,7 +558,7 @@ function ResponderCrucigrama({ store, base, pid, actividad, abierta }) {
           <span className="ml-1.5 text-slate-500 tabular-nums">({p.palabra.length})</span>
         </p>
         {mio ? (
-          <p className="rounded-xl bg-teal-700 text-white px-3 py-2 text-lg font-black tracking-wider">✓ {p.palabra}</p>
+          <p className="rounded-xl bg-teal-700 text-white px-3 py-2 text-lg font-black tracking-wider"><Icon name="check" className="mr-1.5" strokeWidth={3} />{p.palabra}</p>
         ) : destapada ? (
           <p className="rounded-xl bg-slate-100 px-3 py-2 text-slate-600">
             <b className="tracking-wider">{p.palabra}</b> · <span className="text-sm">{t('destapadaEnPantalla')}</span>
@@ -660,7 +669,7 @@ function ResponderSopa({ store, base, pid, actividad, abierta }) {
             const k = claveSopa(p)
             return (
               <li key={k} className={`rounded-xl border px-3 py-1.5 font-semibold ${propias.has(k) ? 'border-teal-600 bg-teal-50 text-teal-800 line-through decoration-2' : 'border-slate-200 bg-white text-slate-800'}`}>
-                {propias.has(k) && '✓ '}{p.original}
+                {propias.has(k) && <Icon name="check" className="mr-1" strokeWidth={3} />}{p.original}
                 {dePantalla.has(k) && <span className="ml-1.5 text-xs font-normal text-slate-500">· {t('marcadaEnPantalla')}</span>}
               </li>
             )
@@ -764,7 +773,7 @@ function PreguntarYVotar({ store, base, pid, actividad, abierta }) {
   }
   const estado = (q) => (q.decision === null ? t('estadoRevisando')
     : q.decision === false ? t('estadoNoSeMostro')
-    : q.respondida ? `✓ ${t('respondida')}`
+    : q.respondida ? <><Icon name="check" className="mr-1" />{t('respondida')}</>
     : `${t('estadoEnPantalla')} · ▲ ${q.votos}`)
 
   return (
@@ -796,7 +805,7 @@ function PreguntarYVotar({ store, base, pid, actividad, abierta }) {
               {q.corregida
                 ? <Cambios antes={q.original} despues={q.texto} className="font-semibold text-slate-900" />
                 : <p className="font-semibold text-slate-900 break-words">{q.texto}</p>}
-              {q.corregida && <p className="mt-1 text-sm font-bold text-teal-800">✎ {t('profeCorrigio')}</p>}
+              {q.corregida && <p className="mt-1 text-sm font-bold text-teal-800"><Icon name="pencil" className="mr-1" />{t('profeCorrigio')}</p>}
               <div className="mt-1.5 flex items-center gap-2">
                 <span className={`flex-1 text-sm font-bold ${q.decision === true ? 'text-teal-800' : 'text-slate-500'}`}>{estado(q)}</span>
                 {abierta && q.decision === null && (
@@ -937,7 +946,7 @@ function ResponderTablero({ store, pin, base, pid, actividad, abierta }) {
               <p className="text-teal-50">{estadoMio || t('enElMuro')}</p>
             </div>
             <TarjetaPublicacion r={yo} foto={fotoMia} chico verComentarios={false} columna={suColumna(yo)} />
-            {corregida && <p className="text-sm font-bold text-teal-800">✎ {t('profeCorrigio')}</p>}
+            {corregida && <p className="text-sm font-bold text-teal-800"><Icon name="pencil" className="mr-1" />{t('profeCorrigio')}</p>}
             {abierta && (
               <div className="grid grid-cols-2 gap-2">
                 {puedeEditar ? <Button variant="ghost" onClick={editar}>{t('editar')}</Button> : <span />}
@@ -1002,7 +1011,7 @@ function PublicacionEnCelular({ r, foto, actividad, columna, comentarios, puedeC
       <span className="flex-1 min-w-0">
         <span className="block text-xs font-black uppercase tracking-wider text-teal-800">{t('tuPublicacion')}</span>
         {propia.estado && <span className="block text-xs font-semibold text-amber-900">{propia.estado}</span>}
-        {propia.corregida && <span className="block text-xs font-semibold text-teal-800">✎ {t('profeCorrigio')}</span>}
+        {propia.corregida && <span className="block text-xs font-semibold text-teal-800"><Icon name="pencil" className="mr-1" />{t('profeCorrigio')}</span>}
       </span>
       {propia.onEditar && !propia.editando && (
         <button type="button" onClick={propia.onEditar} className="rounded-lg border border-teal-600 bg-white px-3 py-1 text-sm font-bold text-teal-800">{t('editar')}</button>
@@ -1102,7 +1111,7 @@ function FormPublicacion({ actividad, inicial, fotoInicial, onPublicar, onCancel
           ) : (
             <button type="button" onClick={() => entrada.current?.click()} disabled={estado === 'achicando'}
               className="rounded-2xl border-2 border-dashed border-slate-300 bg-white p-6 text-lg font-bold text-slate-700 active:scale-[.98] transition">
-              {estado === 'achicando' ? t('preparandoFoto') : `📷 ${t('agregarFoto')}`}
+              {estado === 'achicando' ? t('preparandoFoto') : <><Icon name="camera" className="mr-2" />{t('agregarFoto')}</>}
             </button>
           )}
           {estado === 'error' && <p role="alert" className="text-sm text-rose-700">{t('fotoError')}</p>}
