@@ -104,7 +104,7 @@ export const rangoAlternativas = (tipo) => (tipo === 'ranking'
 export const conAlternativas = (tipo) => tipo === 'encuesta' || tipo === 'ranking'
 
 /* Letras y colores de las alternativas: los mismos de Kachai, que a propósito
-   no son los de Kahoot (ni figuras ni rojo-azul-amarillo-verde). */
+   no usan figuras ni el esquema rojo-azul-amarillo-verde. */
 export const ALTERNATIVAS = [
   { letra: 'A', solido: 'bg-violet-600', texto: 'text-violet-700', tinte: 'bg-violet-50', borde: 'border-violet-600' },
   { letra: 'B', solido: 'bg-teal-600', texto: 'text-teal-700', tinte: 'bg-teal-50', borde: 'border-teal-600' },
