@@ -21,6 +21,8 @@ import { Icon } from '../icons.jsx'
 export default function Clase({ id }) {
   useTema()
   const store = useStore()
+  /* En tablets la vista del estudiante escala entera (ver .alumno en index.css); en el celular no cambia nada */
+  useEffect(() => { document.documentElement.classList.add('alumno'); return () => document.documentElement.classList.remove('alumno') }, [])
   const [resumen, setResumen] = useState(undefined)
   useEffect(() => {
     if (!store) return

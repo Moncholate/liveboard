@@ -16,6 +16,13 @@ html, body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Tablets: la vista del estudiante estaba hecha para celular (una columna de ~450 px) y en una tablet quedaba
+   chica, al medio y con mucho vacío. En pantallas táctiles anchas se agranda TODO junto (letra, botones y el
+   ancho de la columna van en rem), como un zoom; los celulares (más angostos) quedan igual. Manda el lado corto:
+   una tablet acostada tiene poco alto, y si crece igual que de pie hay que bajar para responder. (Igual que en Kachai.) */
+@media (pointer: coarse) and (min-width: 700px) and (min-height: 700px) { html.alumno { font-size: 18px; } }
+@media (pointer: coarse) and (min-width: 760px) and (min-height: 1000px) { html.alumno { font-size: 21px; } }
+
 /* ── El panel del proyector sobre un fondo ─────────────────────────────────
    Casi opaco a propósito: así la nube, las barras y las respuestas se leen
    igual sobre cualquier fondo. El fondo queda como marco alrededor. */

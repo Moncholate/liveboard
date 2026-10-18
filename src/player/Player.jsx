@@ -51,6 +51,8 @@ export default function Player({ initialPin }) {
   const [yo, setYo] = useState(null)
   const [revisando, setRevisando] = useState(Boolean(initialPin && sesion.get(pidKey(initialPin))))
   const [idioma, setIdioma] = useState(idiomaDelNavegador)
+  /* En tablets la vista del estudiante escala entera (ver .alumno en index.css); en el celular no cambia nada */
+  useEffect(() => { document.documentElement.classList.add('alumno'); return () => document.documentElement.classList.remove('alumno') }, [])
 
   useEffect(() => {
     if (!store || !revisando) return

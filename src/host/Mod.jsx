@@ -9,7 +9,7 @@
    Se entra con el enlace del botón «Celular» del proyector, que lleva la clave
    de la sala. Con el PIN solo, se entra como estudiante.
    ========================================================================== */
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useStore, useValue } from '../net/hooks.js'
 import { Button, Center, Logo } from '../ui.jsx'
 import { consignasDe, cuantosRespondieron, moderable, problemaDe, tituloDe } from '../live/logic.js'
@@ -27,6 +27,8 @@ import { useTema } from '../tema.jsx'
 export default function Mod({ pin, clave }) {
   useTema()
   const store = useStore()
+  /* El control del docente en la tablet: escala entero como la vista del estudiante (ver .alumno en index.css) */
+  useEffect(() => { document.documentElement.classList.add('alumno'); return () => document.documentElement.classList.remove('alumno') }, [])
   const base = raiz(pin)
   const meta = useValue(store, `${base}/meta`)
   const idioma = valido(useValue(store, `${base}/idioma`))
