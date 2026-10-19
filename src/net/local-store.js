@@ -41,7 +41,16 @@ export function createLocalStore() {
       if (json !== l.last) { l.last = json; l.cb(JSON.parse(json)) }
     }
   }
-  channel.onmessage = notify
+  /* El aviso de otra pestaña puede llegar antes que su escritura en
+     localStorage (cada pestaña es otro proceso): leer de inmediato perdía ese
+     cambio, y un celular se quedaba en «Respuesta enviada» con la pregunta ya
+     revelada (19-oct-2026). Se relee un momento después; notify no repite lo
+     que no cambió. */
+  channel.onmessage = () => {
+    notify()
+    setTimeout(notify, 60)
+    setTimeout(notify, 250)
+  }
 
   function write(mutate) {
     const tree = mutate(load())
